@@ -922,6 +922,13 @@ if (closeCatchBtn) {
                 ${ot.role==="seeker"?"Seeker":`Sobrevivió ${S(ot.survivalTime||0)}`}
                 ${ot.caughtBy?` · Pillado por ${Wa(ot.caughtBy)}`:""}
               </div>
+              ${ot.caughtPhoto ? `
+                <div style="margin-top:4px;">
+                  <button type="button" class="btn btn-ghost btn-sm" style="font-size:0.75rem; padding:3px 8px; border:1px solid rgba(255,255,255,0.18); border-radius:6px; color:var(--color-text);" onclick="event.stopPropagation(); window.openCaughtPhotoModal && window.openCaughtPhotoModal(${pt})">
+                    📸 Ver Coche Pillado
+                  </button>
+                </div>
+              ` : ""}
             </div>
             <span class="player-role" style="${isWinner?"background:linear-gradient(90deg,#D4AF37,#FFD700);color:#0E1015;font-weight:750;":"background:linear-gradient(90deg,#8A0014,#FF1A40);color:#FFF;font-weight:750;"}">
               ${isWinner?"VIP":"PAYASO"}
@@ -946,7 +953,26 @@ if (closeCatchBtn) {
         </button>
       </div>
     </div>
-  `,Bh(_,G,allPlayers,isSeekersWon)}function Bh(_,u,players=[],isSeekersWon=false){window.__resultsPlayers=players;players.forEach((ot,pt)=>{if(ot.photo&&window.processFaceFilter){const isWinner=isSeekersWon?(ot.role==="seeker"):(ot.role==="hider"&&ot.isAlive!==false);const mode=isWinner?"millionaire":"clown";window.processFaceFilter(ot.photo,mode).then(filteredPhoto=>{ot.filteredPhoto=filteredPhoto;const img=document.getElementById(`mugshot-img-${pt}`);if(img&&filteredPhoto){img.src=filteredPhoto;img.classList.add("filter-applied")}})}});window.openMugshotModal=pt=>{const pl=window.__resultsPlayers&&window.__resultsPlayers[pt];if(!pl)return;const isWinner=isSeekersWon?(pl.role==="seeker"):(pl.role==="hider"&&pl.isAlive!==false);let existing=document.getElementById("mugshot-viewer-modal");existing&&existing.remove();const modal=document.createElement("div");modal.id="mugshot-viewer-modal";modal.className="mugshot-modal-overlay";modal.innerHTML=`
+  `,Bh(_,G,allPlayers,isSeekersWon)}function Bh(_,u,players=[],isSeekersWon=false){window.__resultsPlayers=players;players.forEach((ot,pt)=>{if(ot.photo&&window.processFaceFilter){const isWinner=isSeekersWon?(ot.role==="seeker"):(ot.role==="hider"&&ot.isAlive!==false);const mode=isWinner?"millionaire":"clown";window.processFaceFilter(ot.photo,mode).then(filteredPhoto=>{ot.filteredPhoto=filteredPhoto;const img=document.getElementById(`mugshot-img-${pt}`);if(img&&filteredPhoto){img.src=filteredPhoto;img.classList.add("filter-applied")}})}});window.openCaughtPhotoModal=pt=>{const pl=window.__resultsPlayers&&window.__resultsPlayers[pt];if(!pl||!pl.caughtPhoto)return;let existing=document.getElementById("caught-photo-modal");existing&&existing.remove();const modal=document.createElement("div");modal.id="caught-photo-modal";modal.className="mugshot-modal-overlay";modal.innerHTML=`
+      <div class="mugshot-modal-card loser-border">
+        <div style="padding:14px 18px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--color-border);">
+          <div>
+            <div style="font-weight:700; color:var(--color-text); font-size:1.1rem;">🚗 Coche de ${Wa(pl.name)}</div>
+            <div style="font-size:0.813rem; color:var(--color-danger); font-weight:700;">
+              ${pl.caughtBy?`📸 Fichado por ${Wa(pl.caughtBy)}`:"📸 Foto de Captura"}
+            </div>
+          </div>
+          <button id="btn-close-caught-photo" class="btn-icon btn-ghost" style="border:none;">${wt("x",20)}</button>
+        </div>
+        <img src="${pl.caughtPhoto}" class="mugshot-modal-img" alt="Coche cazado" />
+        <div style="padding:14px 18px; display:flex; gap:10px; background:var(--color-bg-elevated);">
+          <a href="${pl.caughtPhoto}" download="coche_${pl.name||"cazado"}.jpg" class="btn btn-primary" style="flex:1; text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px;">
+            ${wt("download",16)} Descargar Foto Coche
+          </a>
+          <button id="btn-close-caught-photo-bottom" class="btn btn-ghost">Cerrar</button>
+        </div>
+      </div>
+    `;document.body.appendChild(modal);const close=()=>modal.remove();modal.querySelector("#btn-close-caught-photo").onclick=close;modal.querySelector("#btn-close-caught-photo-bottom").onclick=close;modal.onclick=e=>{e.target===modal&&close()}};window.openMugshotModal=pt=>{const pl=window.__resultsPlayers&&window.__resultsPlayers[pt];if(!pl)return;const isWinner=isSeekersWon?(pl.role==="seeker"):(pl.role==="hider"&&pl.isAlive!==false);let existing=document.getElementById("mugshot-viewer-modal");existing&&existing.remove();const modal=document.createElement("div");modal.id="mugshot-viewer-modal";modal.className="mugshot-modal-overlay";modal.innerHTML=`
       <div class="mugshot-modal-card ${isWinner?"winner-border":"loser-border"}">
         <div style="padding:14px 18px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--color-border);">
           <div>
@@ -958,9 +984,15 @@ if (closeCatchBtn) {
           <button id="btn-close-mugshot" class="btn-icon btn-ghost" style="border:none;">${wt("x",20)}</button>
         </div>
         <img src="${pl.filteredPhoto||pl.photo}" class="mugshot-modal-img" alt="${Wa(pl.name)}" />
+        ${pl.caughtPhoto?`
+          <div style="padding:10px 18px; background:rgba(255,255,255,0.03); border-top:1px solid var(--color-border); display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:0.813rem; color:var(--color-text-muted);">🚗 Coche cazado fichado</span>
+            <button class="btn btn-ghost btn-sm" onclick="window.openCaughtPhotoModal(${pt})">Ver Foto Coche</button>
+          </div>
+        `:""}
         <div style="padding:14px 18px; display:flex; gap:10px; background:var(--color-bg-elevated);">
           <a href="${pl.filteredPhoto||pl.photo}" download="${isWinner?"ganador_millonario":"payaso"}_${pl.name||"foto"}.jpg" class="btn btn-primary" style="flex:1; text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px;">
-            ${wt("download",16)} Descargar Foto
+            ${wt("download",16)} Descargar Selfie
           </a>
           <button id="btn-close-mugshot-bottom" class="btn btn-ghost">Cerrar</button>
         </div>

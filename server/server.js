@@ -109,14 +109,16 @@ function normalizeSettings(s = {}) {
 
 function getPlayersArray(room) {
   return Object.values(room.players).map(p => ({
-    id:       p.id,
-    name:     p.name,
-    carColor: p.carColor,
-    carModel: p.carModel,
-    isHost:   p.isHost,
-    role:     p.role,
-    isAlive:  p.isAlive,
-    photo:    p.photo || null,
+    id:          p.id,
+    name:        p.name,
+    carColor:    p.carColor,
+    carModel:    p.carModel,
+    isHost:      p.isHost,
+    role:        p.role,
+    isAlive:     p.isAlive,
+    photo:       p.photo || null,
+    caughtPhoto: p.caughtPhoto || null,
+    caughtBy:    p.caughtBy || null,
   }));
 }
 
@@ -563,8 +565,9 @@ io.on('connection', (socket) => {
     if (!target || !target.isAlive || target.role !== 'hider') return;
 
     if (photo && room.settings.photoEnabled) {
-      target.photo = photo;
+      target.caughtPhoto = photo;
     }
+    target.caughtBy = catcher.name;
 
     const becomesSeeker = room.settings.caughtBecomesSeeker;
     if (becomesSeeker) {
