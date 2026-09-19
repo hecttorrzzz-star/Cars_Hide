@@ -17,10 +17,27 @@ const io         = new Server(httpServer, {
 
 const PORT = process.env.PORT || 3000;
 
-app.use(express.static(path.join(__dirname, '..')));
+const APP_RELEASE = {
+  version: "1.3.0",
+  deployedAt: "2026-09-19 17:22 (UTC+2)",
+  latestCommit: "0ac3164",
+  features: [
+    "HUD táctil y Z-Index reforzado en móviles (Botón GPS y Chat flotante)",
+    "Centrado GPS con rescate automático (getCurrentPosition)",
+    "Visibilidad por rol (Buscadores solo ven buscadores, Escondidos solo escondidos)",
+    "Temporizadores de fase sincronizados y reducción automática de zona",
+    "Animación de 3s al revelar el rol al inicio",
+    "Radar Sonar táctico para buscadores (cooldown 12s)",
+    "Cámara y selfie con filtros AR (Ganador VIP vs Payaso 3D)"
+  ]
+};
+
+app.get(['/api/version', '/version'], (_req, res) => {
+  res.json({ status: 'ok', ...APP_RELEASE });
+});
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', rooms: Object.keys(rooms).length });
+  res.json({ status: 'ok', rooms: Object.keys(rooms).length, version: APP_RELEASE.version });
 });
 
 app.get('*', (_req, res) => {

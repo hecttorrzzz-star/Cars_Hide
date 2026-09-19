@@ -17,6 +17,29 @@
   <script type="module" crossorigin src="assets/index-BajZ5J3I.js"></script>
   <link rel="stylesheet" crossorigin href="assets/index-DYysjeVV.css">
   <link rel="stylesheet" href="style-override.css">
+  <script>
+    window.APP_VERSION = "1.3.0";
+    window.version = window.checkVersion = async function() {
+      try {
+        const res = await fetch('/version?t=' + Date.now());
+        const data = await res.json();
+        console.log("%c🚗 CAR HIDE — CONTROL DE VERSIONES", "color:#FF9500; font-size:15px; font-weight:bold; background:#16181F; padding:4px 10px; border-radius:6px;");
+        console.table({
+          "Versión Actual": data.version,
+          "Último Despliegue": data.deployedAt,
+          "Commit Hash": data.latestCommit,
+          "Estado Servidor": data.status
+        });
+        console.log("%c✨ Novedades y Añadidos en esta Versión:", "color:#30D158; font-weight:bold; font-size:13px;");
+        data.features.forEach((f, i) => console.log(`  ${i + 1}. ${f}`));
+        return "✅ Versión verificada con éxito.";
+      } catch (e) {
+        console.warn("Error al consultar el servidor:", e);
+        return "⚠️ No se pudo consultar la versión.";
+      }
+    };
+    console.log("%c💡 Escribe version() en la consola para comprobar la última versión y novedades.", "color:#007AFF; font-weight:600;");
+  </script>
 </head>
 <body>
   <div id="app"></div>
