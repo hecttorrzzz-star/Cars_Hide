@@ -460,45 +460,8 @@ var Qu=Object.defineProperty;var tl=(_,u,c)=>u in _?Qu(_,u,{enumerable:!0,config
       </div>
     </div>
 
-    <!-- Mapa fullscreen -->
-    <div id="game-map" class="map-container"></div>
-
-    <!-- Navbar -->
-    <nav class="navbar" style="background: var(--color-bg-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);">
-      <span class="navbar-logo" style="font-size:1rem;">
-        ${wt("car",18)}
-        <span>Car <span class="text-accent">Hide</span></span>
-      </span>
-      <div class="navbar-status">
-        <span class="status-dot"></span>
-        <span style="font-size:0.75rem;">Online</span>
-      </div>
-    </nav>
-
-    <!-- Game HUD -->
-    <div class="game-hud">
-    <!-- Modal de Foto de Fichado -->
-    <div id="photo-modal" class="photo-modal-overlay hidden">
-      <div class="photo-modal-card">
-        <div class="photo-badge-tag">FICHA POLICIAL DE CAPTURA</div>
-        <h3 id="photo-modal-target-name" style="margin-top:8px; font-size:1.3rem;">¡Has cazado a un rival!</h3>
-        <p class="text-muted" style="font-size:0.85rem; margin-bottom:14px;">Haz una foto rápida al coche para que aparezca fichado en los resultados.</p>
-        
-        <div id="photo-preview-box" class="photo-preview-box">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-          <span style="font-size:0.8rem; margin-top:6px;">Toca para abrir la cámara</span>
-          <input type="file" id="camera-file-input" accept="image/*" capture="environment" class="camera-hidden-input" />
-        </div>
-
-        <div class="photo-modal-actions" style="margin-top:16px; display:flex; gap:10px;">
-          <button id="btn-skip-photo" class="btn btn-ghost btn-sm" style="flex:1;">Omitir</button>
-          <button id="btn-save-photo" class="btn btn-primary btn-sm hidden" style="flex:1;">Guardar Ficha</button>
-        </div>
-      </div>
-    </div>
-
     <!-- Modal de Seguridad y Copiloto -->
-    <div id="safety-modal" class="safety-modal-overlay">
+    <div id="safety-modal" class="safety-modal-overlay" onclick="if(event.target===this){this.classList.add('closing');setTimeout(()=>{try{this.remove()}catch(e){}},200);}">
       <div class="safety-modal-card">
         <div class="safety-icon-badge">
           <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FF9500" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -524,12 +487,49 @@ var Qu=Object.defineProperty;var tl=(_,u,c)=>u in _?Qu(_,u,{enumerable:!0,config
             <span>El copiloto busca y atrapa a los rivales</span>
           </div>
         </div>
-        <button id="btn-safety-confirm" class="btn btn-primary btn-lg" style="width:100%; margin-top:var(--space-md);">
+        <button id="btn-safety-confirm" class="btn btn-primary btn-lg" style="width:100%; margin-top:var(--space-md);" onclick="const m=document.getElementById('safety-modal');if(m){m.classList.add('closing');setTimeout(()=>{try{m.remove()}catch(e){}},200);}">
           Soy el copiloto · Entendido
         </button>
       </div>
     </div>
 
+    <!-- Modal de Foto de Fichado -->
+    <div id="photo-modal" class="photo-modal-overlay hidden">
+      <div class="photo-modal-card">
+        <div class="photo-badge-tag">FICHA POLICIAL DE CAPTURA</div>
+        <h3 id="photo-modal-target-name" style="margin-top:8px; font-size:1.3rem;">¡Has cazado a un rival!</h3>
+        <p class="text-muted" style="font-size:0.85rem; margin-bottom:14px;">Haz una foto rápida al coche para que aparezca fichado en los resultados.</p>
+        
+        <div id="photo-preview-box" class="photo-preview-box">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <span style="font-size:0.8rem; margin-top:6px;">Toca para abrir la cámara</span>
+          <input type="file" id="camera-file-input" accept="image/*" capture="environment" class="camera-hidden-input" />
+        </div>
+
+        <div class="photo-modal-actions" style="margin-top:16px; display:flex; gap:10px;">
+          <button id="btn-skip-photo" class="btn btn-ghost btn-sm" style="flex:1;">Omitir</button>
+          <button id="btn-save-photo" class="btn btn-primary btn-sm hidden" style="flex:1;">Guardar Ficha</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mapa fullscreen -->
+    <div id="game-map" class="map-container"></div>
+
+    <!-- Navbar -->
+    <nav class="navbar" style="background: var(--color-bg-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);">
+      <span class="navbar-logo" style="font-size:1rem;">
+        ${wt("car",18)}
+        <span>Car <span class="text-accent">Hide</span></span>
+      </span>
+      <div class="navbar-status">
+        <span class="status-dot"></span>
+        <span style="font-size:0.75rem;">Online</span>
+      </div>
+    </nav>
+
+    <!-- Game HUD -->
+    <div class="game-hud">
       <!-- Top bar -->
       <div class="hud-top">
         <div class="hud-phase">
@@ -648,16 +648,20 @@ var Qu=Object.defineProperty;var tl=(_,u,c)=>u in _?Qu(_,u,{enumerable:!0,config
     clearInterval(rrInterval);
     dismiss();
   }, 3100);
-  setTimeout(() => {
+  const dismissSafety = () => {
     const sModal = document.getElementById("safety-modal");
-    const sBtn = document.getElementById("btn-safety-confirm");
-    if (sModal && sBtn) {
-      sBtn.addEventListener("click", () => {
-        sModal.classList.add("closing");
-        setTimeout(() => sModal.remove(), 250);
-      });
+    if (sModal) {
+      sModal.classList.add("closing");
+      setTimeout(() => { try { sModal.remove(); } catch(e){} }, 200);
     }
-  }, 50);
+  };
+  const sBtn = document.getElementById("btn-safety-confirm");
+  if (sBtn) {
+    sBtn.onclick = dismissSafety;
+    sBtn.addEventListener("click", dismissSafety);
+    sBtn.addEventListener("touchend", dismissSafety);
+    sBtn.addEventListener("pointerdown", dismissSafety);
+  }
 var u,c,g,w,G,S,it;
 const centerBtn = document.getElementById("btn-center");
 if (centerBtn) {
