@@ -1,5 +1,5 @@
 /**
- * Car Hide — Backend Servidor Node.js + Express + Socket.io (v1.1.0)
+ * Car Hide — Backend Servidor Node.js + Express + Socket.io (v1.2.0)
  * 100% Compatible con las firmas y eventos exactos del frontend + Captura Táctica por Mapa
  */
 
@@ -54,14 +54,32 @@ function createPlayer(socketId, name, carColor, carModel, isHost = false, photo 
 }
 
 function normalizeSettings(s = {}) {
+  // Manejo robusto de tiempos (en segundos)
+  let hideTimeSec = Number(s.hideTime);
+  if (isNaN(hideTimeSec) || hideTimeSec <= 0) hideTimeSec = 300;
+  else if (hideTimeSec < 60) hideTimeSec = hideTimeSec * 60; // Si enviaron minutos
+
+  let gameDurationSec = Number(s.gameDuration);
+  if (s.infiniteMode) gameDurationSec = 0;
+  else if (isNaN(gameDurationSec) || gameDurationSec <= 0) gameDurationSec = 1800;
+  else if (gameDurationSec < 60) gameDurationSec = gameDurationSec * 60;
+
+  let shrinkIntervalSec = Number(s.zoneShrinkInterval);
+  if (isNaN(shrinkIntervalSec) || shrinkIntervalSec <= 0) shrinkIntervalSec = 300;
+  else if (shrinkIntervalSec < 60) shrinkIntervalSec = shrinkIntervalSec * 60;
+
+  let transitionTimeSec = Number(s.zoneTransitionTime);
+  if (isNaN(transitionTimeSec) || transitionTimeSec <= 0) transitionTimeSec = 120;
+  else if (transitionTimeSec < 60) transitionTimeSec = transitionTimeSec * 60;
+
   return {
-    hideTime:           Number(s.hideTime)           || 5,
-    gameDuration:       Number(s.gameDuration)       || 30,
+    hideTime:           hideTimeSec,
+    gameDuration:       gameDurationSec,
     infiniteMode:       Boolean(s.infiniteMode),
-    zoneShrinkInterval: Number(s.zoneShrinkInterval) || 5,
-    zoneTransitionTime: Number(s.zoneTransitionTime) || 2,
+    zoneShrinkInterval: shrinkIntervalSec,
+    zoneTransitionTime: transitionTimeSec,
     outsideZoneLimit:   Number(s.outsideZoneLimit)   || 30,
-    seekerCount:        Number(s.seekerCount)        || 1,
+    seekerCount:        Math.max(1, Math.floor(Number(s.seekerCount) || 1)),
     caughtBecomesSeeker: s.caughtBecomesSeeker       !== false,
     eliminatedBecomesSeeker: s.eliminatedBecomesSeeker !== false,
     sonarEnabled:       Boolean(s.sonarEnabled),
@@ -103,9 +121,38 @@ function getDistanceMeters(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
+function shrinkPolygon(geoJson, factor = 0.72) {
+  if (!geoJson) return null;
+  try {
+    const coords = geoJson.geometry ? geoJson.geometry.coordinates[0] : (geoJson.coordinates ? geoJson.coordinates[0] : null);
+    if (!coords || coords.length < 3) return null;
+    let sumLat = 0, sumLng = 0;
+    const n = coords.length - 1;
+    for (let i = 0; i < n; i++) {
+      sumLng += coords[i][0];
+      sumLat += coords[i][1];
+    }
+    const cLng = sumLng / n;
+    const cLat = sumLat / n;
+    const newRing = coords.map(([lng, lat]) => [
+      cLng + (lng - cLng) * factor,
+      cLat + (lat - cLat) * factor
+    ]);
+    return {
+      type: 'Feature',
+      geometry: {
+        type: 'Polygon',
+        coordinates: [newRing]
+      },
+      properties: {}
+    };
+  } catch (e) {
+    return null;
+  }
+}
 
 function triggerSonarPing(room) {
-  if (!room || room.phase !== 'SEEKING') return;
+  if (!room || (room.phase !== 'SEEKING' && room.phase !== 'ZONE_WARNING')) return;
 
   const aliveHiders = Object.values(room.players).filter(p => p.role === 'hider' && p.isAlive && p.lat && p.lng);
   if (aliveHiders.length === 0) return;
@@ -125,12 +172,12 @@ function triggerSonarPing(room) {
     if (p.role === 'seeker') {
       socketObj.emit('sonar_ping', {
         sectors: sectors,
-        message: ' ¡Barrido de Sonar recibido! Sectores marcados durante 15s'
+        message: '📡 ¡Barrido de Sonar recibido! Sectores marcados durante 15s'
       });
     } else {
       socketObj.emit('sonar_ping', {
         sectors: [],
-        message: '️ ¡ALERTA DE SONAR! El buscador ha recibido pistas de cuadrante'
+        message: '⚠️ ¡ALERTA DE SONAR! El buscador ha recibido pistas de cuadrante'
       });
     }
   });
@@ -138,9 +185,43 @@ function triggerSonarPing(room) {
   console.log(`[Sonar Ping] Emitidos ${sectors.length} sectores en sala ${room.code}`);
 }
 
+function scheduleZoneShrinking(room) {
+  if (!room || !room.currentZone || room.phase === 'ENDED') return;
+
+  const shrinkIntervalMs = (room.settings.zoneShrinkInterval || 300) * 1000;
+  const transitionTimeMs = (room.settings.zoneTransitionTime || 120) * 1000;
+
+  room.timers.zoneInterval = setInterval(() => {
+    if (room.phase === 'ENDED') return;
+
+    const nextZone = shrinkPolygon(room.currentZone, 0.70);
+    if (!nextZone) return;
+
+    room.phase = 'ZONE_WARNING';
+    io.to(room.code).emit('zone_shrinking', {
+      nextZone: nextZone,
+      transitionTime: room.settings.zoneTransitionTime,
+    });
+
+    room.timers.zoneTransition = setTimeout(() => {
+      if (room.phase === 'ENDED') return;
+      room.currentZone = nextZone;
+      room.phase = 'SEEKING';
+      io.to(room.code).emit('zone_updated', {
+        currentZone: room.currentZone,
+      });
+      console.log(`[Zona Actualizada] Reducida en sala ${room.code}`);
+    }, transitionTimeMs);
+
+  }, shrinkIntervalMs + transitionTimeMs);
+}
+
 function clearRoomTimers(room) {
   if (room.timers) {
-    Object.values(room.timers).forEach(t => clearTimeout(t));
+    Object.values(room.timers).forEach(t => {
+      clearTimeout(t);
+      clearInterval(t);
+    });
     room.timers = {};
   }
 }
@@ -176,7 +257,7 @@ io.on('connection', (socket) => {
         isHost: true,
       });
 
-      console.log(`[Sala Creada] ${code} por ${playerName}`);
+      console.log(`[Sala Creada] ${code} por ${playerName} (${JSON.stringify(rooms[code].settings)})`);
     } catch (err) {
       console.error(err);
       socket.emit('error', { message: 'Error al crear la partida' });
@@ -235,7 +316,7 @@ io.on('connection', (socket) => {
 
     room.phase = 'HIDING';
     room.startedAt = Date.now();
-    const hideTimeMs = (room.settings.hideTime || 5) * 60_000;
+    const hideTimeMs = (room.settings.hideTime || 300) * 1000;
     const phaseEndsAt = Date.now() + hideTimeMs;
 
     playerList.forEach(p => {
@@ -254,7 +335,7 @@ io.on('connection', (socket) => {
     room.timers.hideTimer = setTimeout(() => {
       if (room.phase === 'ENDED') return;
       room.phase = 'SEEKING';
-      const gameDurationMs = room.settings.infiniteMode ? 0 : (room.settings.gameDuration || 30) * 60_000;
+      const gameDurationMs = room.settings.infiniteMode ? 0 : (room.settings.gameDuration || 1800) * 1000;
       const seekEndsAt = gameDurationMs > 0 ? Date.now() + gameDurationMs : 0;
 
       io.to(room.code).emit('phase_change', {
@@ -262,6 +343,15 @@ io.on('connection', (socket) => {
         phaseEndsAt: seekEndsAt,
       });
 
+      // Sonar periódico si está activado (cada 4 min)
+      if (room.settings.sonarEnabled) {
+        room.timers.sonarInterval = setInterval(() => triggerSonarPing(room), 240_000);
+      }
+
+      // Encogimiento de zona periódico
+      scheduleZoneShrinking(room);
+
+      // Fin de partida por tiempo (si no es infinito)
       if (!room.settings.infiniteMode && gameDurationMs > 0) {
         room.timers.seekTimer = setTimeout(() => {
           if (room.phase === 'ENDED') return;
@@ -280,10 +370,10 @@ io.on('connection', (socket) => {
         }, gameDurationMs);
       }
 
-      console.log(`[Partida ${room.code}] Comienza la fase de Búsqueda`);
+      console.log(`[Partida ${room.code}] Comienza la fase de Búsqueda (Duración: ${gameDurationMs / 1000}s)`);
     }, hideTimeMs);
 
-    console.log(`[Partida Iniciada] ${room.code} con ${playerList.length} jugadores`);
+    console.log(`[Partida Iniciada] ${room.code} con ${playerList.length} jugadores. Fase Esconderse: ${hideTimeMs / 1000}s`);
   });
 
   // 5. POSICIÓN
@@ -339,9 +429,6 @@ io.on('connection', (socket) => {
     }
 
     seeker.lastScanAt = now;
-    if (!seeker || seeker.role !== 'seeker') {
-      return socket.emit('spot_miss', { message: 'Solo los buscadores pueden escanear' });
-    }
 
     const CAPTURE_RADIUS_METERS = 85; // Margen de 85m en calle
     const aliveHiders = Object.values(room.players).filter(p => p.role === 'hider' && p.isAlive && p.lat && p.lng);
@@ -358,10 +445,7 @@ io.on('connection', (socket) => {
     }
 
     if (caughtTarget) {
-      if (photo) {
-      target.photo = photo;
-    }
-    const becomesSeeker = room.settings.caughtBecomesSeeker;
+      const becomesSeeker = room.settings.caughtBecomesSeeker;
       if (becomesSeeker) {
         caughtTarget.role = 'seeker';
         caughtTarget.isAlive = true;
@@ -436,7 +520,7 @@ io.on('connection', (socket) => {
       caughtBecomesSeeker: becomesSeeker,
     });
 
-    console.log(`[Captura] ${target.name} cazado por ${catcher.name}`);
+    console.log(`[Captura Directa] ${target.name} cazado por ${catcher.name}`);
 
     const remainingHiders = Object.values(room.players).filter(pl => pl.role === 'hider' && pl.isAlive);
     if (remainingHiders.length === 0) {
@@ -507,5 +591,5 @@ function handleLeave(socket) {
 }
 
 httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n Car Hide server listo en http://localhost:${PORT}\n`);
+  console.log(`\n🚗 Car Hide server listo en http://localhost:${PORT}\n`);
 });
