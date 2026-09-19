@@ -588,9 +588,9 @@ var Qu=Object.defineProperty;var tl=(_,u,c)=>u in _?Qu(_,u,{enumerable:!0,config
           <button id="btn-close-chat" style="background:none; border:none; color:var(--color-text-muted); cursor:pointer; padding:6px;">${wt("x",18)}</button>
         </div>
         <div class="chat-messages" id="chat-messages"></div>
-        <form class="chat-input-row" id="chat-form" onsubmit="return false;">
-          <input type="text" class="chat-input" id="chat-input" placeholder="Escribe un mensaje..." maxlength="200" autocomplete="off" />
-          <button type="submit" class="chat-send" id="btn-send-chat">${wt("send",18)}</button>
+        <form class="chat-input-row" id="chat-form" onsubmit="window.sendGameChatMessage&&window.sendGameChatMessage(event);return false;">
+          <input type="text" class="chat-input" id="chat-input" placeholder="Escribe un mensaje..." maxlength="200" autocomplete="off" onkeydown="if(event.key==='Enter'){window.sendGameChatMessage&&window.sendGameChatMessage(event);}" />
+          <button type="button" class="chat-send" id="btn-send-chat" onclick="window.sendGameChatMessage&&window.sendGameChatMessage(event);" aria-label="Enviar mensaje">${wt("send",18)}</button>
         </form>
       </div>
     </div>
@@ -711,28 +711,45 @@ if (closeChatBtn) {
     if (W) W.classList.remove("open");
   });
 }
-const _ = (e) => {
+window.sendGameChatMessage = (e) => {
   if (e) {
-    if (typeof e.preventDefault === "function") e.preventDefault();
-    if (typeof e.stopPropagation === "function") e.stopPropagation();
+    try { if (typeof e.preventDefault === "function") e.preventDefault(); } catch(err){}
+    try { if (typeof e.stopPropagation === "function") e.stopPropagation(); } catch(err){}
   }
   const W = document.getElementById("chat-input");
   const bt = W == null ? void 0 : W.value.trim();
   if (bt) {
     ut.emit("chat_message", { message: bt });
     W.value = "";
-    setTimeout(() => { if (W) W.focus(); }, 50);
+    setTimeout(() => { try { if (W) W.focus(); } catch(err){} }, 50);
   }
 };
+const _ = window.sendGameChatMessage;
 const sendChatBtn = document.getElementById("btn-send-chat");
 if (sendChatBtn) {
+  sendChatBtn.onclick = _;
   sendChatBtn.addEventListener("click", _);
-  sendChatBtn.addEventListener("touchend", _);
+  sendChatBtn.addEventListener("pointerdown", (e) => {
+    try { e.preventDefault(); } catch(err){}
+    _(e);
+  });
 }
 const chatForm = document.getElementById("chat-form");
-if (chatForm) chatForm.addEventListener("submit", _);
+if (chatForm) {
+  chatForm.onsubmit = (e) => {
+    _(e);
+    return false;
+  };
+  chatForm.addEventListener("submit", _);
+}
 const chatInput = document.getElementById("chat-input");
-if (chatInput) chatInput.addEventListener("keydown", W => { if (W.key === "Enter") _(W); });
+if (chatInput) {
+  chatInput.addEventListener("keydown", W => {
+    if (W.key === "Enter" || W.keyCode === 13) {
+      _(W);
+    }
+  });
+}
 const catchBtn = document.getElementById("btn-catch");
 if (catchBtn) {
   catchBtn.addEventListener("click", () => {
