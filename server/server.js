@@ -17,6 +17,8 @@ const io         = new Server(httpServer, {
 
 const PORT = process.env.PORT || 3000;
 
+app.use(express.static(path.join(__dirname, '..')));
+
 const APP_RELEASE = {
   version: "1.3.0",
   deployedAt: "2026-09-19 17:22 (UTC+2)",
