@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D WebGL Face Filter — Clownify Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <!-- Three.js WebGL 3D Engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- MediaPipe FaceMesh & Camera -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div class="app-container">
+    <header class="header">
+      <div class="header-badge">3D WEBGL FACE MESH ENGINE</div>
+      <h1 class="title">Clownify <span class="highlight">3D Pro</span></h1>
+      <p class="subtitle">Filtro WebGL con mapeo de textura UV en 3D que se adapta a las curvas de tu cara</p>
+    </header>
+
+    <main class="main-content">
+      <!-- Panel de Lienzo WebGL 3D -->
+      <section class="stage-card">
+        <div id="drop-zone" class="drop-zone">
+          <div class="drop-prompt" id="drop-prompt">
+            <div class="upload-icon">
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+            </div>
+            <h3>Sube una foto o selfie</h3>
+            <p>El motor 3D adaptará la textura de maquillaje a la geometría real de tu rostro</p>
+            <div style="display:flex; gap:10px; margin-top:6px;">
+              <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">Elegir Foto</button>
+              <button id="btn-start-camera" class="btn btn-ghost">Usar Cámara en Vivo</button>
+            </div>
+            <input type="file" id="file-input" accept="image/*" style="display:none">
+            <video id="video-feed" playsinline webkit-playsinline autoplay muted style="display:none"></video>
+          </div>
+
+          <div id="canvas-container" class="canvas-container hidden">
+            <div class="canvas-wrapper" id="canvas-wrapper">
+              <canvas id="webgl-canvas"></canvas>
+            </div>
+            <div id="loading-spinner" class="loading-overlay hidden">
+              <div class="spinner"></div>
+              <span>Generando malla 3D y texturas UV...</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="action-bar" class="action-bar hidden">
+          <button id="btn-toggle-mesh" class="btn btn-ghost">Ver Malla 3D</button>
+          <button id="btn-snapshot" class="btn btn-primary hidden">Capturar Foto</button>
+          <button id="btn-change-photo" class="btn btn-ghost" onclick="document.getElementById('file-input').click()">Otra Foto</button>
+          <button id="btn-download" class="btn btn-primary">Descargar Foto 3D</button>
+        </div>
+      </section>
+
+      <!-- Panel de Control de Calibración 3D -->
+      <aside class="controls-card">
+        <h2 class="controls-title">Seleccionar Modelo 3D</h2>
+
+        <div class="style-grid">
+          <button class="style-card active" data-mode="clown" onclick="switchMode('clown')">
+            <div class="style-preview harlequin-preview"></div>
+            <div>
+              <span class="style-name">Payaso Pro 3D</span>
+              <span class="style-desc">Piel porcelana, rombos zafiro bajo cejas, nariz y sonrisa</span>
+            </div>
+          </button>
+
+          <button class="style-card" data-mode="millionaire" onclick="switchMode('millionaire')">
+            <div class="style-preview millionaire-preview"></div>
+            <div>
+              <span class="style-name">Ganador Millonario 3D</span>
+              <span class="style-desc">Gafas de oro VIP, puro habano, cadena cubana y billetes</span>
+            </div>
+          </button>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Controles para Payaso -->
+        <div id="controls-clown">
+          <h3 class="section-subtitle">Calibración de Payaso</h3>
+
+          <div class="control-group">
+            <div class="control-label">
+              <span>Opacidad del Maquillaje</span>
+              <span id="val-opacity" class="control-val">90%</span>
+            </div>
+            <input type="range" id="slider-opacity" min="20" max="100" value="90" class="range-slider">
+          </div>
+
+          <div class="control-group">
+            <div class="control-label">
+              <span>Tamaño de la Nariz 3D</span>
+              <span id="val-nose" class="control-val">100%</span>
+            </div>
+            <input type="range" id="slider-nose" min="0" max="150" value="100" class="range-slider">
+          </div>
+
+          <div class="control-group">
+            <div class="control-label">
+              <span>Amplitud de Sonrisa</span>
+              <span id="val-smile" class="control-val">100%</span>
+            </div>
+            <input type="range" id="slider-smile" min="50" max="150" value="100" class="range-slider">
+          </div>
+        </div>
+
+        <!-- Controles para Ganador Millonario -->
+        <div id="controls-millionaire" class="hidden">
+          <h3 class="section-subtitle">Calibración VIP Millonario</h3>
+
+          <div class="control-group">
+            <div class="control-label">
+              <span>Gafas de Oro Aviador</span>
+              <span id="val-glasses" class="control-val">100%</span>
+            </div>
+            <input type="range" id="slider-glasses" min="0" max="150" value="100" class="range-slider">
+          </div>
+
+          <div class="control-group">
+            <div class="control-label">
+              <span>Puro Habano y Humo</span>
+              <span id="val-cigar" class="control-val">100%</span>
+            </div>
+            <input type="range" id="slider-cigar" min="0" max="150" value="100" class="range-slider">
+          </div>
+
+          <div class="control-group">
+            <div class="control-label">
+              <span>Cadena Cubana de Oro</span>
+              <span id="val-chain" class="control-val">100%</span>
+            </div>
+            <input type="range" id="slider-chain" min="0" max="150" value="100" class="range-slider">
+          </div>
+
+          <div class="control-group">
+            <div class="control-label">
+              <span>Lluvia de Billetes y Brillos</span>
+              <span id="val-cash" class="control-val">100%</span>
+            </div>
+            <input type="range" id="slider-cash" min="0" max="150" value="100" class="range-slider">
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="toggle-row">
+          <div class="toggle-text">
+            <span class="toggle-title">Fusión con Iluminación Real</span>
+            <span class="toggle-sub">Aplica modo multiply/overlay con la luz de tu foto</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggle-blend" checked>
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
