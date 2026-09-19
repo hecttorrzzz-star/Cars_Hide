@@ -653,7 +653,85 @@ var Qu=Object.defineProperty;var tl=(_,u,c)=>u in _?Qu(_,u,{enumerable:!0,config
       });
     }
   }, 50);
-var u,c,g,w,G,S,it;(u=document.getElementById("btn-center"))==null||u.addEventListener("click",()=>{const W=oo.getLastPosition();W&&so.centerOnPlayer(W.lat,W.lng)}),(c=document.getElementById("btn-chat"))==null||c.addEventListener("click",()=>{var bt;ct.isChatOpen=!ct.isChatOpen;const W=document.getElementById("chat-floating");ct.isChatOpen?(W.classList.add("open"),ct.unreadMessages=0,_u(),(bt=document.getElementById("chat-input"))==null||bt.focus()):W.classList.remove("open")}),(g=document.getElementById("btn-close-chat"))==null||g.addEventListener("click",()=>{var W;ct.isChatOpen=!1,(W=document.getElementById("chat-floating"))==null||W.classList.remove("open")});const _=()=>{const W=document.getElementById("chat-input"),bt=W==null?void 0:W.value.trim();bt&&(ut.emit("chat_message",{message:bt}),W.value="")};(w=document.getElementById("btn-send-chat"))==null||w.addEventListener("click",_),(G=document.getElementById("chat-input"))==null||G.addEventListener("keydown",W=>{W.key==="Enter"&&_()}),(S=document.getElementById("btn-catch"))==null||S.addEventListener("click",()=>{ct.isCatchPanelOpen=!0,document.getElementById("catch-panel").classList.add("open"),Ch()}),(it=document.getElementById("btn-close-catch"))==null||it.addEventListener("click",()=>{var W;ct.isCatchPanelOpen=!1,(W=document.getElementById("catch-panel"))==null||W.classList.remove("open")})}function bh(){ut.on("phase_change",_=>{ct.phase=_.phase,ct.phaseEndsAt=_.phaseEndsAt,fu(),ga()}),ut.on("positions_update",_=>{const u=ut.getId(),aIds=new Set(_.map(c=>c.id));aIds.add(u);for(const[mId]of Ve.markers){if(!aIds.has(mId))Ve.removePlayer(mId);}_.forEach(c=>{c.id!==u&&(Ve.getMarker(c.id)?Ve.updatePlayer(c.id,c):Ve.addPlayer({id:c.id,name:c.name,carColor:c.carColor,lat:c.lat,lng:c.lng,heading:c.heading}))})}),ut.on("sonar_ping",_=>{
+var u,c,g,w,G,S,it;
+const centerBtn = document.getElementById("btn-center");
+if (centerBtn) {
+  centerBtn.addEventListener("click", () => {
+    const W = oo.getLastPosition();
+    if (W && W.lat && W.lng) {
+      so.centerOnPlayer(W.lat, W.lng);
+      Ke("📍 Centrado en tu ubicación");
+    } else if ("geolocation" in navigator) {
+      Ke("Buscando señal GPS...");
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          so.centerOnPlayer(pos.coords.latitude, pos.coords.longitude);
+          Ke("📍 Centrado en tu ubicación");
+        },
+        () => Ke("Esperando señal GPS precisa..."),
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    } else {
+      Ke("GPS no disponible");
+    }
+  });
+}
+const chatBtn = document.getElementById("btn-chat");
+if (chatBtn) {
+  chatBtn.addEventListener("click", () => {
+    ct.isChatOpen = !ct.isChatOpen;
+    const W = document.getElementById("chat-floating");
+    if (ct.isChatOpen) {
+      if (W) W.classList.add("open");
+      ct.unreadMessages = 0;
+      _u();
+      setTimeout(() => {
+        const bt = document.getElementById("chat-input");
+        if (bt) bt.focus();
+      }, 100);
+    } else {
+      if (W) W.classList.remove("open");
+    }
+  });
+}
+const closeChatBtn = document.getElementById("btn-close-chat");
+if (closeChatBtn) {
+  closeChatBtn.addEventListener("click", () => {
+    ct.isChatOpen = false;
+    const W = document.getElementById("chat-floating");
+    if (W) W.classList.remove("open");
+  });
+}
+const _ = () => {
+  const W = document.getElementById("chat-input");
+  const bt = W == null ? void 0 : W.value.trim();
+  if (bt) {
+    ut.emit("chat_message", { message: bt });
+    W.value = "";
+  }
+};
+const sendChatBtn = document.getElementById("btn-send-chat");
+if (sendChatBtn) sendChatBtn.addEventListener("click", _);
+const chatInput = document.getElementById("chat-input");
+if (chatInput) chatInput.addEventListener("keydown", W => { if (W.key === "Enter") _(); });
+const catchBtn = document.getElementById("btn-catch");
+if (catchBtn) {
+  catchBtn.addEventListener("click", () => {
+    ct.isCatchPanelOpen = true;
+    const cp = document.getElementById("catch-panel");
+    if (cp) cp.classList.add("open");
+    Ch();
+  });
+}
+const closeCatchBtn = document.getElementById("btn-close-catch");
+if (closeCatchBtn) {
+  closeCatchBtn.addEventListener("click", () => {
+    ct.isCatchPanelOpen = false;
+    const cp = document.getElementById("catch-panel");
+    if (cp) cp.classList.remove("open");
+  });
+}
+}function bh(){ut.on("phase_change",_=>{ct.phase=_.phase,ct.phaseEndsAt=_.phaseEndsAt,fu(),ga()}),ut.on("positions_update",_=>{const u=ut.getId(),aIds=new Set(_.map(c=>c.id));aIds.add(u);for(const[mId]of Ve.markers){if(!aIds.has(mId))Ve.removePlayer(mId);}_.forEach(c=>{c.id!==u&&(Ve.getMarker(c.id)?Ve.updatePlayer(c.id,c):Ve.addPlayer({id:c.id,name:c.name,carColor:c.carColor,lat:c.lat,lng:c.lng,heading:c.heading}))})}),ut.on("sonar_ping",_=>{
   if (_.message) Ke(_.message);
   if (_.sectors && _.sectors.length && window.L && so && so.getMap()) {
     const map = so.getMap();
