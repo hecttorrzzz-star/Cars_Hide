@@ -388,8 +388,9 @@ io.on('connection', (socket) => {
     p.lng = pos.lng;
     p.heading = pos.heading || 0;
 
+    // Buscadores vivos con posición
     const activeSeekers = Object.values(room.players)
-      .filter(pl => pl.role === 'seeker' && pl.lat && pl.lng)
+      .filter(pl => pl.role === 'seeker' && pl.isAlive && pl.lat && pl.lng)
       .map(pl => ({
         id: pl.id,
         name: pl.name,
@@ -399,9 +400,31 @@ io.on('connection', (socket) => {
         heading: pl.heading,
       }));
 
-    if (activeSeekers.length > 0) {
-      io.to(room.code).emit('positions_update', activeSeekers);
-    }
+    // Escondidos vivos con posición
+    const activeHiders = Object.values(room.players)
+      .filter(pl => pl.role === 'hider' && pl.isAlive && pl.lat && pl.lng)
+      .map(pl => ({
+        id: pl.id,
+        name: pl.name,
+        carColor: pl.carColor,
+        lat: pl.lat,
+        lng: pl.lng,
+        heading: pl.heading,
+      }));
+
+    // Regla táctica:
+    // 1. Buscadores solo ven la ubicación de otros buscadores.
+    // 2. Escondidos solo ven la ubicación de otros escondidos (nunca a los buscadores).
+    Object.values(room.players).forEach(pl => {
+      const socketObj = io.sockets.sockets.get(pl.id);
+      if (!socketObj) return;
+
+      if (pl.role === 'seeker') {
+        socketObj.emit('positions_update', activeSeekers);
+      } else if (pl.role === 'hider') {
+        socketObj.emit('positions_update', activeHiders);
+      }
+    });
   });
 
   // 6. AVISTAR / CAPTURAR POR MAPA (SPOT ON MAP)
