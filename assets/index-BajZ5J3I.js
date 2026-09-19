@@ -810,13 +810,39 @@ if (closeCatchBtn) {
     if (pSave) pSave.classList.add("hidden");
     pBox.onclick = () => pInput.click();
     pInput.onchange = e => {
-      const file = e.target.files[0];
+      const file = e.target.files && e.target.files[0];
       if (file) {
+        pBox.innerHTML = '<div class="spinner" style="margin:8px auto;"></div><span style="font-size:0.75rem; color:var(--color-text-muted);">Comprimiendo foto...</span>';
         const reader = new FileReader();
         reader.onload = ev => {
-          currentPhotoData = ev.target.result;
-          pBox.innerHTML = `<img src="${currentPhotoData}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" />`;
-          pSave && pSave.classList.remove("hidden");
+          const img = new Image();
+          img.onload = () => {
+            const maxDim = 640;
+            let w = img.width, h = img.height;
+            if (w > maxDim || h > maxDim) {
+              if (w > h) {
+                h = Math.round((h * maxDim) / w);
+                w = maxDim;
+              } else {
+                w = Math.round((w * maxDim) / h);
+                h = maxDim;
+              }
+            }
+            const canvas = document.createElement("canvas");
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, w, h);
+            currentPhotoData = canvas.toDataURL("image/jpeg", 0.80);
+            pBox.innerHTML = `<img src="${currentPhotoData}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" />`;
+            if (pSave) pSave.classList.remove("hidden");
+          };
+          img.onerror = () => {
+            currentPhotoData = ev.target.result;
+            pBox.innerHTML = `<img src="${currentPhotoData}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" />`;
+            if (pSave) pSave.classList.remove("hidden");
+          };
+          img.src = ev.target.result;
         };
         reader.readAsDataURL(file);
       }
@@ -830,6 +856,7 @@ if (closeCatchBtn) {
       pModal.classList.add("hidden");
       ut.emit("catch_player", { targetId: g, photo: currentPhotoData, roomCode: ct.roomCode });
       (w=document.getElementById("btn-close-catch"))==null||w.click();
+      Ke("📸 ¡Foto guardada y jugador cazado!");
     };
     pModal.classList.remove("hidden");
   } else {

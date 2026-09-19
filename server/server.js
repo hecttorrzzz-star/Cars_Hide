@@ -13,6 +13,7 @@ const httpServer = createServer(app);
 const io         = new Server(httpServer, {
   cors: { origin: '*' },
   transports: ['websocket', 'polling'],
+  maxHttpBufferSize: 1e7,
 });
 
 const PORT = process.env.PORT || 3000;
@@ -550,7 +551,7 @@ io.on('connection', (socket) => {
       room = rooms[roomCode];
       socket.join(roomCode);
     }
-    if (!room || (room.phase !== 'SEEKING' && room.phase !== 'ZONE_WARNING')) return;
+    if (!room || room.phase === 'LOBBY' || room.phase === 'ENDED') return;
 
     let catcher = room.players[socket.id];
     if (!catcher) {
