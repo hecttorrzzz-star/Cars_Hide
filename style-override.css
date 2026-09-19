@@ -1244,6 +1244,19 @@ small {
 /* ─────────────────────────────────────────────
    CAPAS HUD & RESPUESTA TÁCTIL EN MÓVIL
 ──────────────────────────────────────────────── */
+#game-map,
+.map-container {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 1 !important;
+  pointer-events: auto !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
+.leaflet-container {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
 .game-hud {
   position: absolute !important;
   inset: 0 !important;
@@ -1254,12 +1267,42 @@ small {
 }
 
 .game-hud > * {
+  pointer-events: none !important;
+}
+
+.hud-top {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  padding: calc(var(--navbar-height) + var(--space-sm)) 20px var(--space-sm) !important;
+  gap: var(--space-xs) !important;
+  pointer-events: none !important;
+  position: relative !important;
+  z-index: 1510 !important;
+}
+
+.hud-top > * {
   pointer-events: auto !important;
+}
+
+.hud-spacer {
+  flex: 1 !important;
+  pointer-events: none !important;
+  min-height: 40px !important;
 }
 
 .hud-bottom {
   position: relative !important;
   z-index: 1510 !important;
+  pointer-events: none !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-end !important;
+  padding: var(--space-sm) 20px var(--space-lg) !important;
+  gap: var(--space-sm) !important;
+}
+
+.hud-bottom > * {
   pointer-events: auto !important;
 }
 

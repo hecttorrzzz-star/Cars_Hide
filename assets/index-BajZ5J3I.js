@@ -582,16 +582,16 @@ var Qu=Object.defineProperty;var tl=(_,u,c)=>u in _?Qu(_,u,{enumerable:!0,config
 
     <!-- Floating Chat Panel -->
     <div id="chat-floating" class="chat-floating">
-      <div class="chat-container" style="max-height:280px;">
+      <div class="chat-container">
         <div class="chat-header">
-          <span class="chat-header-title">${wt("messageCircle",14)} Chat</span>
-          <button id="btn-close-chat" style="background:none; border:none; color:var(--color-text-muted); cursor:pointer; padding:4px;">${wt("x",18)}</button>
+          <span class="chat-header-title">${wt("messageCircle",14)} Chat de Partida</span>
+          <button id="btn-close-chat" style="background:none; border:none; color:var(--color-text-muted); cursor:pointer; padding:6px;">${wt("x",18)}</button>
         </div>
         <div class="chat-messages" id="chat-messages"></div>
-        <div class="chat-input-row">
-          <input type="text" class="chat-input" id="chat-input" placeholder="Escribe..." maxlength="200" autocomplete="off" />
-          <button class="chat-send" id="btn-send-chat">${wt("send",18)}</button>
-        </div>
+        <form class="chat-input-row" id="chat-form" onsubmit="return false;">
+          <input type="text" class="chat-input" id="chat-input" placeholder="Escribe un mensaje..." maxlength="200" autocomplete="off" />
+          <button type="submit" class="chat-send" id="btn-send-chat">${wt("send",18)}</button>
+        </form>
       </div>
     </div>
 
@@ -707,18 +707,28 @@ if (closeChatBtn) {
     if (W) W.classList.remove("open");
   });
 }
-const _ = () => {
+const _ = (e) => {
+  if (e) {
+    if (typeof e.preventDefault === "function") e.preventDefault();
+    if (typeof e.stopPropagation === "function") e.stopPropagation();
+  }
   const W = document.getElementById("chat-input");
   const bt = W == null ? void 0 : W.value.trim();
   if (bt) {
     ut.emit("chat_message", { message: bt });
     W.value = "";
+    setTimeout(() => { if (W) W.focus(); }, 50);
   }
 };
 const sendChatBtn = document.getElementById("btn-send-chat");
-if (sendChatBtn) sendChatBtn.addEventListener("click", _);
+if (sendChatBtn) {
+  sendChatBtn.addEventListener("click", _);
+  sendChatBtn.addEventListener("touchend", _);
+}
+const chatForm = document.getElementById("chat-form");
+if (chatForm) chatForm.addEventListener("submit", _);
 const chatInput = document.getElementById("chat-input");
-if (chatInput) chatInput.addEventListener("keydown", W => { if (W.key === "Enter") _(); });
+if (chatInput) chatInput.addEventListener("keydown", W => { if (W.key === "Enter") _(W); });
 const catchBtn = document.getElementById("btn-catch");
 if (catchBtn) {
   catchBtn.addEventListener("click", () => {
