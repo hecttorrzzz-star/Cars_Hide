@@ -629,9 +629,11 @@ io.on('connection', (socket) => {
     }
 
     const payload = {
+      type: 'player',
       senderId: socket.id,
       playerName: p.name,
-      carColor: p.carColor,
+      carColor: p.carColor || '#007aff',
+      playerColor: p.carColor || '#007aff',
       message: txt,
       timestamp: Date.now(),
     };

@@ -588,10 +588,19 @@ var Qu=Object.defineProperty;var tl=(_,u,c)=>u in _?Qu(_,u,{enumerable:!0,config
           <button id="btn-close-chat" style="background:none; border:none; color:var(--color-text-muted); cursor:pointer; padding:6px;">${wt("x",18)}</button>
         </div>
         <div class="chat-messages" id="chat-messages"></div>
-        <form class="chat-input-row" id="chat-form" onsubmit="window.sendGameChatMessage&&window.sendGameChatMessage(event);return false;">
-          <input type="text" class="chat-input" id="chat-input" placeholder="Escribe un mensaje..." maxlength="200" autocomplete="off" onkeydown="if(event.key==='Enter'){window.sendGameChatMessage&&window.sendGameChatMessage(event);}" />
-          <button type="button" class="chat-send" id="btn-send-chat" onclick="window.sendGameChatMessage&&window.sendGameChatMessage(event);" aria-label="Enviar mensaje">${wt("send",18)}</button>
-        </form>
+        <div class="chat-input-row">
+          <input 
+            type="text" 
+            class="chat-input" 
+            id="chat-input" 
+            placeholder="Escribe un mensaje..." 
+            maxlength="200" 
+            autocomplete="off" 
+          />
+          <button class="chat-send" id="chat-send-btn" aria-label="Enviar">
+            ${wt("send",18)}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -686,75 +695,49 @@ if (centerBtn) {
   });
 }
 const chatBtn = document.getElementById("btn-chat");
+const closeChatBtn = document.getElementById("btn-close-chat");
+const chatFloating = document.getElementById("chat-floating");
+const chatInput = document.getElementById("chat-input");
+const chatSendBtn = document.getElementById("chat-send-btn");
+
 if (chatBtn) {
-  chatBtn.addEventListener("click", () => {
+  chatBtn.onclick = () => {
     ct.isChatOpen = !ct.isChatOpen;
-    const W = document.getElementById("chat-floating");
+    if (chatFloating) chatFloating.classList.toggle("open", ct.isChatOpen);
     if (ct.isChatOpen) {
-      if (W) W.classList.add("open");
       ct.unreadMessages = 0;
       _u();
-      setTimeout(() => {
-        const bt = document.getElementById("chat-input");
-        if (bt) bt.focus();
-      }, 100);
-    } else {
-      if (W) W.classList.remove("open");
+      if (chatInput) setTimeout(() => chatInput.focus(), 80);
     }
-  });
-}
-const closeChatBtn = document.getElementById("btn-close-chat");
-if (closeChatBtn) {
-  closeChatBtn.addEventListener("click", () => {
-    ct.isChatOpen = false;
-    const W = document.getElementById("chat-floating");
-    if (W) W.classList.remove("open");
-  });
-}
-window.sendGameChatMessage = (e) => {
-  if (e) {
-    try { if (typeof e.preventDefault === "function") e.preventDefault(); } catch(err){}
-    try { if (typeof e.stopPropagation === "function") e.stopPropagation(); } catch(err){}
-  }
-  const W = document.getElementById("chat-input");
-  const bt = W == null ? void 0 : W.value.trim();
-  if (bt) {
-    const myId = ut.getId();
-    const myPlayer = (ct.players || []).find(p => p.id === myId);
-    const pName = (myPlayer && myPlayer.name) || Ut.playerName || "Jugador";
-    const pColor = (myPlayer && myPlayer.carColor) || Ut.carColor || "#007aff";
-
-    console.log("[Chat] Enviando mensaje:", bt, "en sala:", ct.roomCode);
-    ut.emit("chat_message", {
-      roomCode: ct.roomCode,
-      playerName: pName,
-      carColor: pColor,
-      message: bt
-    });
-
-    W.value = "";
-    setTimeout(() => { try { if (W) W.focus(); } catch(err){} }, 50);
-  }
-};
-const _ = window.sendGameChatMessage;
-const sendChatBtn = document.getElementById("btn-send-chat");
-if (sendChatBtn) {
-  sendChatBtn.onclick = _;
-}
-const chatForm = document.getElementById("chat-form");
-if (chatForm) {
-  chatForm.onsubmit = (e) => {
-    _(e);
-    return false;
   };
 }
-const chatInput = document.getElementById("chat-input");
+
+if (closeChatBtn) {
+  closeChatBtn.onclick = () => {
+    ct.isChatOpen = false;
+    if (chatFloating) chatFloating.classList.remove("open");
+  };
+}
+
+const sendGameMsg = () => {
+  if (!chatInput) return;
+  const txt = chatInput.value.trim();
+  if (txt) {
+    ut.emit("chat_message", { message: txt, roomCode: ct.roomCode });
+    chatInput.value = "";
+  }
+};
+
+if (chatSendBtn) {
+  chatSendBtn.onclick = sendGameMsg;
+}
 if (chatInput) {
-  chatInput.addEventListener("keydown", W => {
-    if (W.key === "Enter" || W.keyCode === 13) {
-      _(W);
+  chatInput.onkeydown = (e) => {
+    if (e.key === "Enter" || e.keyCode === 13) {
+      e.preventDefault();
+      sendGameMsg();
     }
-  });
+  };
 }
 const catchBtn = document.getElementById("btn-catch");
 if (catchBtn) {
