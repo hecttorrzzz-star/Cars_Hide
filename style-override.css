@@ -1310,6 +1310,13 @@ small {
   box-shadow: 0 0 20px rgba(255, 69, 58, 0.6) !important;
 }
 
+.hud-btn.hidden,
+.hud-btn-catch.hidden,
+#btn-catch.hidden,
+.hidden {
+  display: none !important;
+}
+
 .chat-floating {
   position: fixed !important;
   bottom: 90px !important;
