@@ -347,6 +347,8 @@ io.on('connection', (socket) => {
           yourRole: p.role,
           players: getPlayersArray(room),
           zone: room.zone,
+          settings: room.settings,
+          roomCode: room.code,
         });
       }
     });
@@ -357,6 +359,15 @@ io.on('connection', (socket) => {
       const gameDurationMs = room.settings.infiniteMode ? 0 : (room.settings.gameDuration || 1800) * 1000;
       const seekEndsAt = gameDurationMs > 0 ? Date.now() + gameDurationMs : 0;
 
+      playerList.forEach(p => {
+        const s = io.sockets.sockets.get(p.id);
+        if (s) {
+          s.emit('phase_change', {
+            phase: 'SEEKING',
+            phaseEndsAt: seekEndsAt,
+          });
+        }
+      });
       io.to(room.code).emit('phase_change', {
         phase: 'SEEKING',
         phaseEndsAt: seekEndsAt,
@@ -531,17 +542,26 @@ io.on('connection', (socket) => {
   });
 
   // 6.2 CAPTURAR MANUAL / DIRECTO
-  socket.on('catch_player', ({ targetId, photo }) => {
-    const room = getRoomByPlayer(socket.id);
+  socket.on('catch_player', (data) => {
+    const { targetId, photo } = data || {};
+    let room = getRoomByPlayer(socket.id);
+    const roomCode = (typeof data === 'object' && data?.roomCode) ? data.roomCode.toUpperCase().trim() : null;
+    if (!room && roomCode && rooms[roomCode]) {
+      room = rooms[roomCode];
+      socket.join(roomCode);
+    }
     if (!room || (room.phase !== 'SEEKING' && room.phase !== 'ZONE_WARNING')) return;
 
-    const catcher = room.players[socket.id];
+    let catcher = room.players[socket.id];
+    if (!catcher) {
+      catcher = Object.values(room.players).find(p => p.role === 'seeker');
+    }
     const target = room.players[targetId];
 
     if (!catcher || catcher.role !== 'seeker') return;
     if (!target || !target.isAlive || target.role !== 'hider') return;
 
-    if (photo) {
+    if (photo && room.settings.photoEnabled) {
       target.photo = photo;
     }
 
