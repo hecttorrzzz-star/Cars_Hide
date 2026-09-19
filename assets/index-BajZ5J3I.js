@@ -719,7 +719,19 @@ window.sendGameChatMessage = (e) => {
   const W = document.getElementById("chat-input");
   const bt = W == null ? void 0 : W.value.trim();
   if (bt) {
-    ut.emit("chat_message", { message: bt });
+    const myId = ut.getId();
+    const myPlayer = (ct.players || []).find(p => p.id === myId);
+    const pName = (myPlayer && myPlayer.name) || Ut.playerName || "Jugador";
+    const pColor = (myPlayer && myPlayer.carColor) || Ut.carColor || "#007aff";
+
+    console.log("[Chat] Enviando mensaje:", bt, "en sala:", ct.roomCode);
+    ut.emit("chat_message", {
+      roomCode: ct.roomCode,
+      playerName: pName,
+      carColor: pColor,
+      message: bt
+    });
+
     W.value = "";
     setTimeout(() => { try { if (W) W.focus(); } catch(err){} }, 50);
   }
@@ -728,11 +740,6 @@ const _ = window.sendGameChatMessage;
 const sendChatBtn = document.getElementById("btn-send-chat");
 if (sendChatBtn) {
   sendChatBtn.onclick = _;
-  sendChatBtn.addEventListener("click", _);
-  sendChatBtn.addEventListener("pointerdown", (e) => {
-    try { e.preventDefault(); } catch(err){}
-    _(e);
-  });
 }
 const chatForm = document.getElementById("chat-form");
 if (chatForm) {
@@ -740,7 +747,6 @@ if (chatForm) {
     _(e);
     return false;
   };
-  chatForm.addEventListener("submit", _);
 }
 const chatInput = document.getElementById("chat-input");
 if (chatInput) {
@@ -836,7 +842,7 @@ if (closeCatchBtn) {
   } else {
     ut.emit("catch_player",{targetId:g}),(w=document.getElementById("btn-close-catch"))==null||w.click();
   }
-})})}function kh(_){const u=document.getElementById("catch-alert"),c=document.getElementById("catch-alert-title"),g=document.getElementById("catch-alert-subtitle"),w=document.getElementById("catch-alert-tip");if(!u)return;const G=ut.getId(),S=_.playerId===G;S?(c.textContent="¡TE HAN PILLADO!",g.textContent=`${_.seekerName} te ha encontrado`,w.textContent=_.caughtBecomesSeeker?"¡Ahora te toca buscar! Sal a cazar.":"Has sido eliminado. Puedes seguir viendo la partida."):(c.textContent="¡JUGADOR CAZADO!",g.textContent=`${_.playerName} ha sido pillado por ${_.seekerName}`,w.textContent="",w.style.display="none"),u.classList.add("active"),setTimeout(()=>{u.classList.remove("active"),w.style.display=""},S?5e3:3e3)}function wh(_){const u=document.getElementById("chat-messages");if(!u)return;const c=document.createElement("div");_.type==="system"?(c.className="chat-msg chat-msg-system",c.textContent=_.message):_.type==="catch"?(c.className="chat-msg chat-msg-catch",c.textContent=_.message):_.type==="zone"?(c.className="chat-msg chat-msg-zone",c.textContent=_.message):(c.className="chat-msg",c.innerHTML=`<span class="msg-author" style="color:${_.playerColor||"var(--color-accent)"}">${ao(_.playerName||"")}:</span> ${ao(_.message)}`),u.appendChild(c),u.scrollTop=u.scrollHeight,ct.isChatOpen||(ct.unreadMessages++,_u())}function _u(){const _=document.getElementById("chat-badge");_&&(ct.unreadMessages>0?(_.textContent=ct.unreadMessages>9?"9+":ct.unreadMessages,_.classList.remove("hidden")):_.classList.add("hidden"))}function ao(_){const u=document.createElement("div");return u.textContent=_||"",u.innerHTML}function Mh(){ct.timerFrame&&cancelAnimationFrame(ct.timerFrame),oo.stop(),du.release(),Ve.clearAll(),Ni.destroy(),so.destroy(),["phase_change","positions_update","zone_shrinking","zone_updated","player_caught","player_role_changed","player_eliminated","chat_message","lobby_update","game_over"].forEach(u=>ut.off(u))}function Eh(_,u){const{ranking:c=[],players:plList=[],duration:g=0,reason:w="",roomCode:G="",winner:winSide=""}=u;const allPlayers=(c&&c.length>0)?c:(plList&&plList.length>0?plList:[]);const S=ot=>{const pt=Math.floor(ot/60),vt=Math.floor(ot%60);return`${pt}:${vt.toString().padStart(2,"0")}`};const isSeekersWon=(w==="all_caught"||winSide==="seekers");const it=()=>{if(isSeekersWon)return"¡El Seeker gana!";if(w==="time_up"||winSide==="hiders")return"¡Los Hiders ganan!";if(w==="zone_collapsed")return"¡Zona colapsada!";return"¡Fin de la Partida!"};const W=()=>{if(isSeekersWon)return"Todos los fugitivos han sido cazados";if(w==="time_up"||winSide==="hiders")return"Los fugitivos han sobrevivido a la cacería";return""};const bt=ot=>ot===0?"#1":ot===1?"#2":ot===2?"#3":`#${ot+1}`;_.innerHTML=`
+})})}function kh(_){const u=document.getElementById("catch-alert"),c=document.getElementById("catch-alert-title"),g=document.getElementById("catch-alert-subtitle"),w=document.getElementById("catch-alert-tip");if(!u)return;const G=ut.getId(),S=_.playerId===G;S?(c.textContent="¡TE HAN PILLADO!",g.textContent=`${_.seekerName} te ha encontrado`,w.textContent=_.caughtBecomesSeeker?"¡Ahora te toca buscar! Sal a cazar.":"Has sido eliminado. Puedes seguir viendo la partida."):(c.textContent="¡JUGADOR CAZADO!",g.textContent=`${_.playerName} ha sido pillado por ${_.seekerName}`,w.textContent="",w.style.display="none"),u.classList.add("active"),setTimeout(()=>{u.classList.remove("active"),w.style.display=""},S?5e3:3e3)}function wh(_){console.log("[Chat] Mensaje recibido:",_);const u=document.getElementById("chat-messages");if(!u)return;const c=document.createElement("div");_.type==="system"?(c.className="chat-msg chat-msg-system",c.textContent=_.message):_.type==="catch"?(c.className="chat-msg chat-msg-catch",c.textContent=_.message):_.type==="zone"?(c.className="chat-msg chat-msg-zone",c.textContent=_.message):(c.className="chat-msg",c.innerHTML=`<span class="msg-author" style="color:${_.carColor||_.playerColor||"var(--color-accent)"}">${ao(_.playerName||"")}:</span> ${ao(_.message)}`);u.appendChild(c);u.scrollTop=u.scrollHeight;ct.isChatOpen||(ct.unreadMessages++,_u())}function _u(){const _=document.getElementById("chat-badge");_&&(ct.unreadMessages>0?(_.textContent=ct.unreadMessages>9?"9+":ct.unreadMessages,_.classList.remove("hidden")):_.classList.add("hidden"))}function ao(_){const u=document.createElement("div");return u.textContent=_||"",u.innerHTML}function Mh(){ct.timerFrame&&cancelAnimationFrame(ct.timerFrame),oo.stop(),du.release(),Ve.clearAll(),Ni.destroy(),so.destroy(),["phase_change","positions_update","zone_shrinking","zone_updated","player_caught","player_role_changed","player_eliminated","chat_message","lobby_update","game_over"].forEach(u=>ut.off(u))}function Eh(_,u){const{ranking:c=[],players:plList=[],duration:g=0,reason:w="",roomCode:G="",winner:winSide=""}=u;const allPlayers=(c&&c.length>0)?c:(plList&&plList.length>0?plList:[]);const S=ot=>{const pt=Math.floor(ot/60),vt=Math.floor(ot%60);return`${pt}:${vt.toString().padStart(2,"0")}`};const isSeekersWon=(w==="all_caught"||winSide==="seekers");const it=()=>{if(isSeekersWon)return"¡El Seeker gana!";if(w==="time_up"||winSide==="hiders")return"¡Los Hiders ganan!";if(w==="zone_collapsed")return"¡Zona colapsada!";return"¡Fin de la Partida!"};const W=()=>{if(isSeekersWon)return"Todos los fugitivos han sido cazados";if(w==="time_up"||winSide==="hiders")return"Los fugitivos han sobrevivido a la cacería";return""};const bt=ot=>ot===0?"#1":ot===1?"#2":ot===2?"#3":`#${ot+1}`;_.innerHTML=`
     <nav class="navbar">
       <div style="width:48px;"></div>
       <span class="navbar-logo">

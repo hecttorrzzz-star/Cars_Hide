@@ -581,21 +581,43 @@ io.on('connection', (socket) => {
   });
 
   // 7. CHAT
-  socket.on('chat_message', ({ message }) => {
-    const room = getRoomByPlayer(socket.id);
-    const p = room?.players[socket.id];
-    if (!room || !p) return;
+  socket.on('chat_message', (data) => {
+    let room = getRoomByPlayer(socket.id);
+    const roomCode = (typeof data === 'object' && data?.roomCode) ? data.roomCode.toUpperCase().trim() : null;
+    if (!room && roomCode && rooms[roomCode]) {
+      room = rooms[roomCode];
+      socket.join(roomCode);
+    }
+    if (!room) {
+      console.warn(`[Chat] Mensaje descartado: socket ${socket.id} no está en ninguna sala`);
+      return;
+    }
 
-    const txt = message?.trim?.().slice(0, 250);
+    const rawMsg = typeof data === 'string' ? data : (data?.message || data?.text || data?.msg || '');
+    const txt = String(rawMsg || '').trim().slice(0, 250);
     if (!txt) return;
 
-    io.to(room.code).emit('chat_message', {
+    let p = room.players[socket.id];
+    if (!p) {
+      p = Object.values(room.players).find(pl => pl.name === data?.playerName) || {
+        id: socket.id,
+        name: data?.playerName || 'Copiloto',
+        carColor: data?.carColor || '#007aff'
+      };
+      room.players[socket.id] = p;
+      socket.join(room.code);
+    }
+
+    const payload = {
       senderId: socket.id,
       playerName: p.name,
       carColor: p.carColor,
       message: txt,
       timestamp: Date.now(),
-    });
+    };
+
+    console.log(`[Chat ${room.code}] ${p.name}: ${txt}`);
+    io.to(room.code).emit('chat_message', payload);
   });
 
   // 8. DESCONEXIÓN
