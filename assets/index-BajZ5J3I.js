@@ -428,6 +428,38 @@ var Qu=Object.defineProperty;var tl=(_,u,c)=>u in _?Qu(_,u,{enumerable:!0,config
         </svg>
       </div>
     `,className:"custom-death-marker",iconSize:[32,32],iconAnchor:[16,16]}),w=re.marker([u.lat,u.lng],{icon:g,zIndexOffset:500}).addTo(this.map);setTimeout(()=>{this.map&&w&&this.map.removeLayer(w)},5e3)}clearAll(){for(const[u,c]of this.markers)this.map&&this.map.removeLayer(c);this.markers.clear()}getMarker(u){return this.markers.get(u)}}const Ve=new _h;class mh{constructor(){this.map=null,this.layerGroups={safeZone:null,nextZone:null,stormOverlay:null},this.animationFrame=null}init(u){this.map=u,this.layerGroups.stormOverlay=re.layerGroup().addTo(this.map),this.layerGroups.safeZone=re.layerGroup().addTo(this.map),this.layerGroups.nextZone=re.layerGroup().addTo(this.map)}renderSafeZone(u){!this.map||!u||(this.layerGroups.safeZone.clearLayers(),re.geoJSON(u,{style:{color:"#00c7be",weight:3,fillColor:"#00c7be",fillOpacity:.05,className:"zone-safe pulsing-border"}}).addTo(this.layerGroups.safeZone))}renderNextZone(u){!this.map||!u||(this.layerGroups.nextZone.clearLayers(),re.geoJSON(u,{style:{color:"#ffcc00",weight:2,dashArray:"10, 10",fillOpacity:0,className:"zone-next"}}).addTo(this.layerGroups.nextZone))}renderStormOverlay(u){if(!(!this.map||!u)){this.layerGroups.stormOverlay.clearLayers();try{const c=[[[-90,-180],[90,-180],[90,180],[-90,180],[-90,-180]]];let g=[];if(u.geometry&&u.geometry.type==="Polygon"?g=u.geometry.coordinates[0].map(G=>[G[1],G[0]]):u.type==="Polygon"?g=u.coordinates[0].map(G=>[G[1],G[0]]):u.features&&u.features.length>0&&(g=u.features[0].geometry.coordinates[0].map(G=>[G[1],G[0]])),g.length===0)return;re.polygon([c[0],g],{color:"#ff3b30",weight:0,fillColor:"#ff3b30",fillOpacity:.35,interactive:!1,className:"storm-overlay"}).addTo(this.layerGroups.stormOverlay)}catch(c){console.error("Error rendering storm overlay:",c)}}}clearNextZone(){this.layerGroups.nextZone&&this.layerGroups.nextZone.clearLayers()}animateZoneTransition(u,c,g){if(!(!this.map||!u||!c)){this.animationFrame&&cancelAnimationFrame(this.animationFrame);try{const w=bt=>bt.features&&bt.features.length>0?bt.features[0].geometry.coordinates[0]:bt.geometry?bt.geometry.coordinates[0]:bt.coordinates?bt.coordinates[0]:[],G=w(u),S=w(c);if(G.length!==S.length){setTimeout(()=>{this.renderSafeZone(c),this.renderStormOverlay(c)},g);return}const it=performance.now(),W=bt=>{let ot=(bt-it)/g;ot>1&&(ot=1);const pt=ot<.5?2*ot*ot:-1+(4-2*ot)*ot,vi={type:"Feature",geometry:{type:"Polygon",coordinates:[G.map((me,Tt)=>{const ui=me[0]+(S[Tt][0]-me[0])*pt,Tn=me[1]+(S[Tt][1]-me[1])*pt;return[ui,Tn]})]}};this.renderSafeZone(vi),this.renderStormOverlay(vi),ot<1?this.animationFrame=requestAnimationFrame(W):(this.renderSafeZone(c),this.renderStormOverlay(c),this.clearNextZone())};this.animationFrame=requestAnimationFrame(W)}catch(w){console.error("Error in zone animation:",w),this.renderSafeZone(c),this.renderStormOverlay(c),this.clearNextZone()}}}destroy(){this.animationFrame&&cancelAnimationFrame(this.animationFrame),this.layerGroups.safeZone&&this.layerGroups.safeZone.clearLayers(),this.layerGroups.nextZone&&this.layerGroups.nextZone.clearLayers(),this.layerGroups.stormOverlay&&this.layerGroups.stormOverlay.clearLayers(),this.map=null}}const Ni=new mh;class gh{constructor(){this.watchId=null,this.lastPosition=null,this.listeners=[],this.tracking=!1,this.deadband=3,this.maxAccuracy=50}isSupported(){return"geolocation"in navigator}async start(){return this.isSupported()?this.tracking?!0:new Promise(u=>{this.watchId=navigator.geolocation.watchPosition(c=>{this.handlePosition(c),this.tracking||(this.tracking=!0,u(!0))},c=>{console.error("[Geo] Error:",c.message),this.tracking||u(!1)},{enableHighAccuracy:!0,timeout:15e3,maximumAge:2e3}),setTimeout(()=>{this.tracking||u(!1)},16e3)}):(console.error("[Geo] Geolocalización no soportada"),!1)}stop(){this.watchId!==null&&(navigator.geolocation.clearWatch(this.watchId),this.watchId=null),this.tracking=!1}handlePosition(u){const{latitude:c,longitude:g,accuracy:w,heading:G}=u.coords;if(w>this.maxAccuracy||this.lastPosition&&this.calculateDistance(this.lastPosition.lat,this.lastPosition.lng,c,g)<this.deadband)return;const S={lat:c,lng:g,heading:G||null,accuracy:w};this.lastPosition=S,this.listeners.forEach(it=>it(S)),ut.emit("player_position",S)}onUpdate(u){this.listeners.push(u)}offUpdate(u){this.listeners=this.listeners.filter(c=>c!==u)}calculateDistance(u,c,g,w){const S=(g-u)*Math.PI/180,it=(w-c)*Math.PI/180,W=Math.sin(S/2)*Math.sin(S/2)+Math.cos(u*Math.PI/180)*Math.cos(g*Math.PI/180)*Math.sin(it/2)*Math.sin(it/2);return 6371e3*(2*Math.atan2(Math.sqrt(W),Math.sqrt(1-W)))}getLastPosition(){return this.lastPosition}}const oo=new gh;class yh{constructor(){at(this,"handleVisibilityChange",async()=>{document.visibilityState==="visible"&&!this.wakeLock&&await this.request()});this.wakeLock=null,this.supported="wakeLock"in navigator}async request(){if(!this.supported)return console.warn("[WakeLock] No soportado en este navegador"),!1;try{return this.wakeLock=await navigator.wakeLock.request("screen"),console.log("[WakeLock] Pantalla bloqueada activa"),this.wakeLock.addEventListener("release",()=>{console.log("[WakeLock] Liberado"),this.wakeLock=null}),document.addEventListener("visibilitychange",this.handleVisibilityChange),!0}catch(u){return console.warn("[WakeLock] Error al solicitar:",u.message),!1}}async release(){this.wakeLock&&(await this.wakeLock.release(),this.wakeLock=null),document.removeEventListener("visibilitychange",this.handleVisibilityChange)}isActive(){return this.wakeLock!==null}}const du=new yh;let ct={roomCode:null,role:null,phase:"HIDING",phaseEndsAt:0,timerFrame:null,players:[],isChatOpen:!1,isCatchPanelOpen:!1,unreadMessages:0};async function vh(_,u){ct.roomCode=u.roomCode||"",ct.phase=u.phase||"HIDING",ct.phaseEndsAt=u.phaseEndsAt||0,ct.players=u.players||[],ct.role=u.yourRole||"hider",ct.isChatOpen=!1,ct.isCatchPanelOpen=!1,ct.unreadMessages=0,await du.request(),await oo.start(),_.classList.add("screen-full"),_.innerHTML=`
+    <!-- Pantalla de Revelación de Rol (3 Segundos) -->
+    <div id="role-reveal-overlay" class="role-reveal-overlay ${ct.role === "seeker" ? "role-reveal-seeker" : "role-reveal-hider"}">
+      <div class="role-reveal-card">
+        <div class="role-reveal-badge">TU ROL EN ESTA PARTIDA</div>
+        <div class="role-reveal-icon-box">
+          ${ct.role === "seeker" ? `
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#FF453A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          ` : `
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#007AFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              <path d="M9 12l2 2 4-4"></path>
+            </svg>
+          `}
+        </div>
+        <h1 class="role-title">${ct.role === "seeker" ? "BUSCADOR" : "ESCÓNDETE"}</h1>
+        <p class="role-instruction">
+          ${ct.role === "seeker" 
+            ? "BUSCADOR, encuentra al resto de jugadores antes de que se acabe el tiempo" 
+            : "ESCÓNDETE, el buscador te intentará encontrar"}
+        </p>
+        <div class="role-reveal-timer-wrap">
+          <div class="role-reveal-bar-bg">
+            <div class="role-reveal-bar-fill"></div>
+          </div>
+          <span class="role-reveal-countdown" id="role-reveal-sec">Comenzando en 3s...</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Mapa fullscreen -->
     <div id="game-map" class="map-container"></div>
 
@@ -592,6 +624,25 @@ var Qu=Object.defineProperty;var tl=(_,u,c)=>u in _?Qu(_,u,{enumerable:!0,config
     return;
   }
   ct.lastScanAt = now;const lat=vt.latlng.lat,lng=vt.latlng.lng;const pingIcon=re.divIcon({html:'<div class="sonar-tap-ping"></div>',className:"sonar-tap-container",iconSize:[80,80],iconAnchor:[40,40]});const pingMarker=re.marker([lat,lng],{icon:pingIcon}).addTo(c);setTimeout(()=>c.removeLayer(pingMarker),1200);ut.emit("spot_player",{lat,lng});}});u.zone&&(Ni.renderSafeZone(u.zone),Ni.renderStormOverlay(u.zone),so.fitBounds(u.zone)),ct.players.forEach(g=>{g.lat&&g.lng&&Ve.addPlayer(g)}),fu(),ga(),xh(),oo.onUpdate(g=>{ut.emit("player_position",g);const w=ut.getId();if(w)if(Ve.getMarker(w))Ve.updatePlayer(w,g);else{const G=ct.players.find(S=>S.id===w);G&&Ve.addPlayer({...G,...g,isSelf:!0})}}),Lh(),bh()}function pu(_){return{HIDING:"ESCONDERSE",SEEKING:"BUSCANDO",ZONE_WARNING:"ZONA REDUCIÉNDOSE",ENDED:"FINALIZADO",COUNTDOWN:"CUENTA ATRÁS"}[_]||_}function Lh(){
+  let rrCount = 3;
+  const rrEl = document.getElementById("role-reveal-sec");
+  const rrInterval = setInterval(() => {
+    rrCount--;
+    if (rrCount > 0) {
+      if (rrEl) rrEl.textContent = `Comenzando en ${rrCount}s...`;
+    } else {
+      if (rrEl) rrEl.textContent = "¡A JUGAR!";
+      clearInterval(rrInterval);
+    }
+  }, 1000);
+  setTimeout(() => {
+    clearInterval(rrInterval);
+    const rrOverlay = document.getElementById("role-reveal-overlay");
+    if (rrOverlay) {
+      rrOverlay.classList.add("role-reveal-exit");
+      setTimeout(() => rrOverlay.remove(), 400);
+    }
+  }, 3000);
   setTimeout(() => {
     const sModal = document.getElementById("safety-modal");
     const sBtn = document.getElementById("btn-safety-confirm");
