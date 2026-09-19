@@ -1,5 +1,5 @@
 /**
- * Car Hide — Backend Servidor Node.js + Express + Socket.io
+ * Car Hide — Backend Servidor Node.js + Express + Socket.io (v1.1.0)
  * 100% Compatible con las firmas y eventos exactos del frontend + Captura Táctica por Mapa
  */
 
