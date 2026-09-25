@@ -581,10 +581,34 @@ io.on('connection', (socket) => {
   });
 
   // 3. LOBBY
-  socket.on('request_lobby', ({ roomCode }) => {
-    const room = rooms[roomCode?.toUpperCase?.()];
-    if (!room) return;
-    socket.emit('lobby_update', getPlayersArray(room));
+  socket.on('request_lobby', (data) => {
+    const rawCode = typeof data === 'string' ? data : (data?.roomCode || '');
+    let room = rooms[rawCode?.toUpperCase?.()?.trim?.()];
+    if (!room) {
+      room = getRoomByPlayer(socket.id);
+    }
+    if (!room) return socket.emit('lobby_update', []);
+
+    if (room.phase === 'ENDED') {
+      room.phase = 'LOBBY';
+      room.currentZone = room.zone;
+      clearRoomTimers(room);
+      Object.values(room.players).forEach(p => {
+        p.isAlive = true;
+        p.role = 'hider';
+        p.initialRole = 'hider';
+        p.survivalTime = null;
+        p.caughtAt = null;
+        p.caughtBy = null;
+        p.caughtPhoto = null;
+        p.catchesCount = 0;
+        p.outsideSince = null;
+      });
+    }
+
+    const playersArr = getPlayersArray(room);
+    socket.emit('lobby_update', playersArr);
+    io.to(room.code).emit('lobby_update', playersArr);
   });
 
   // 4. INICIAR PARTIDA
