@@ -230,39 +230,6 @@ function getCoordinatesFromGeoJson(geoJson) {
   return null;
 }
 
-function shrinkPolygon(geoJson, factor = 0.70) {
-  if (!geoJson) return null;
-  try {
-    const coords = getCoordinatesFromGeoJson(geoJson);
-    if (!coords || coords.length < 3) return null;
-
-    let sumLat = 0, sumLng = 0;
-    const isClosed = coords.length > 1 && coords[0][0] === coords[coords.length - 1][0] && coords[0][1] === coords[coords.length - 1][1];
-    const n = isClosed ? coords.length - 1 : coords.length;
-    for (let i = 0; i < n; i++) {
-      sumLng += coords[i][0];
-      sumLat += coords[i][1];
-    }
-    const cLng = sumLng / n;
-    const cLat = sumLat / n;
-    const newRing = coords.map(([lng, lat]) => [
-      cLng + (lng - cLng) * factor,
-      cLat + (lat - cLat) * factor
-    ]);
-    return {
-      type: 'Feature',
-      geometry: {
-        type: 'Polygon',
-        coordinates: [newRing]
-      },
-      properties: {}
-    };
-  } catch (e) {
-    console.error('[shrinkPolygon] Error:', e);
-    return null;
-  }
-}
-
 function isPointInPolygon(lat, lng, geoJson) {
   if (lat == null || lng == null || !geoJson) return true;
   const coords = getCoordinatesFromGeoJson(geoJson);
@@ -277,6 +244,92 @@ function isPointInPolygon(lat, lng, geoJson) {
     if (intersect) inside = !inside;
   }
   return inside;
+}
+
+function shrinkPolygon(geoJson, factor = 0.60) {
+  if (!geoJson) return null;
+  try {
+    const coords = getCoordinatesFromGeoJson(geoJson);
+    if (!coords || coords.length < 3) return null;
+
+    let minLng = Infinity, maxLng = -Infinity;
+    let minLat = Infinity, maxLat = -Infinity;
+    let sumLat = 0, sumLng = 0;
+
+    const isClosed = coords.length > 1 && coords[0][0] === coords[coords.length - 1][0] && coords[0][1] === coords[coords.length - 1][1];
+    const n = isClosed ? coords.length - 1 : coords.length;
+
+    for (let i = 0; i < n; i++) {
+      const [lng, lat] = coords[i];
+      sumLng += lng;
+      sumLat += lat;
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+    }
+
+    const cLng = sumLng / n;
+    const cLat = sumLat / n;
+    const spanLng = maxLng - minLng;
+    const spanLat = maxLat - minLat;
+
+    // Desplazamiento aleatorio para ubicar la nueva zona en cualquier parte dentro de la actual
+    const maxShiftFraction = (1 - factor) * 0.45;
+    let bestRing = null;
+
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const shiftLng = (Math.random() * 2 - 1) * spanLng * maxShiftFraction;
+      const shiftLat = (Math.random() * 2 - 1) * spanLat * maxShiftFraction;
+
+      const candidateRing = coords.map(([lng, lat]) => [
+        cLng + shiftLng + (lng - cLng) * factor,
+        cLat + shiftLat + (lat - cLat) * factor
+      ]);
+
+      // Validar que todos los vértices y puntos intermedios caigan dentro de la zona actual
+      let allInside = true;
+      for (let i = 0; i < candidateRing.length; i++) {
+        const [pLng, pLat] = candidateRing[i];
+        if (!isPointInPolygon(pLat, pLng, geoJson)) {
+          allInside = false;
+          break;
+        }
+        const nextIdx = (i + 1) % candidateRing.length;
+        const midLng = (pLng + candidateRing[nextIdx][0]) / 2;
+        const midLat = (pLat + candidateRing[nextIdx][1]) / 2;
+        if (!isPointInPolygon(midLat, midLng, geoJson)) {
+          allInside = false;
+          break;
+        }
+      }
+
+      if (allInside) {
+        bestRing = candidateRing;
+        break;
+      }
+    }
+
+    // Fallback al centro exacto si ninguna posición desplazada cupo
+    if (!bestRing) {
+      bestRing = coords.map(([lng, lat]) => [
+        cLng + (lng - cLng) * factor,
+        cLat + (lat - cLat) * factor
+      ]);
+    }
+
+    return {
+      type: 'Feature',
+      geometry: {
+        type: 'Polygon',
+        coordinates: [bestRing]
+      },
+      properties: {}
+    };
+  } catch (e) {
+    console.error('[shrinkPolygon] Error:', e);
+    return null;
+  }
 }
 
 function checkPlayerOutsideZone(room, p, socketObj) {
@@ -439,7 +492,7 @@ function startZoneCycle(room) {
 function runZoneShrinkWarning(room) {
   if (!room || room.phase === 'ENDED') return;
 
-  const nextZone = shrinkPolygon(room.currentZone, 0.70);
+  const nextZone = shrinkPolygon(room.currentZone, 0.60);
   if (!nextZone) return;
 
   const transitionTimeMs = (room.settings.zoneTransitionTime || 120) * 1000;
