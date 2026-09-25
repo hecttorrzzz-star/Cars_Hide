@@ -1577,13 +1577,17 @@ small {
   position: relative !important;
   z-index: 10 !important;
   transition: transform 0.12s ease, filter 0.12s ease !important;
+.chat-send {
+  touch-action: manipulation !important;
+  -webkit-tap-highlight-color: transparent !important;
+  cursor: pointer !important;
 }
 
-.chat-floating .chat-send * {
+.chat-send * {
   pointer-events: none !important;
 }
 
-.chat-floating .chat-send:active {
+.chat-send:active {
   transform: scale(0.92) !important;
   filter: brightness(1.2) !important;
 }
