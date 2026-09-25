@@ -64,12 +64,18 @@ function createPlayer(socketId, name, carColor, carModel, isHost = false, photo 
     carModel: carModel || '',
     isHost: isHost,
     role: 'hider',
+    initialRole: 'hider',
     isAlive: true,
     lat: null,
     lng: null,
     heading: 0,
     photo: photo || null,
     lastScanAt: 0,
+    survivalTime: null,
+    caughtAt: null,
+    caughtBy: null,
+    caughtPhoto: null,
+    catchesCount: 0,
   };
 }
 
@@ -108,18 +114,80 @@ function normalizeSettings(s = {}) {
 }
 
 function getPlayersArray(room) {
+  const totalDuration = room.startedAt ? Math.floor((Date.now() - room.startedAt) / 1000) : 0;
   return Object.values(room.players).map(p => ({
-    id:          p.id,
-    name:        p.name,
-    carColor:    p.carColor,
-    carModel:    p.carModel,
-    isHost:      p.isHost,
-    role:        p.role,
-    isAlive:     p.isAlive,
-    photo:       p.photo || null,
-    caughtPhoto: p.caughtPhoto || null,
-    caughtBy:    p.caughtBy || null,
+    id:           p.id,
+    name:         p.name,
+    carColor:     p.carColor,
+    carModel:     p.carModel,
+    isHost:       p.isHost,
+    role:         p.role,
+    initialRole:  p.initialRole || p.role,
+    isAlive:      p.isAlive,
+    survivalTime: (p.survivalTime !== null && p.survivalTime !== undefined) ? p.survivalTime : ((p.role === 'hider' && p.isAlive) ? totalDuration : null),
+    catchesCount: p.catchesCount || 0,
+    photo:        p.photo || null,
+    caughtPhoto:  p.caughtPhoto || null,
+    caughtBy:     p.caughtBy || null,
   }));
+}
+
+function computeRanking(room, winner) {
+  const totalDuration = room.startedAt ? Math.max(1, Math.floor((Date.now() - room.startedAt) / 1000)) : 0;
+  const list = Object.values(room.players).map(p => {
+    let sTime = p.survivalTime;
+    if (sTime === null || sTime === undefined) {
+      if (p.role === 'hider' && p.isAlive) {
+        sTime = totalDuration;
+      } else if (p.initialRole === 'seeker') {
+        sTime = null;
+      } else {
+        sTime = totalDuration;
+      }
+    }
+    return {
+      id:           p.id,
+      name:         p.name,
+      carColor:     p.carColor,
+      carModel:     p.carModel,
+      isHost:       p.isHost,
+      role:         p.role,
+      initialRole:  p.initialRole || p.role,
+      isAlive:      p.isAlive,
+      survivalTime: sTime,
+      catchesCount: p.catchesCount || 0,
+      photo:        p.photo || null,
+      caughtPhoto:  p.caughtPhoto || null,
+      caughtBy:     p.caughtBy || null,
+    };
+  });
+
+  return list.sort((a, b) => {
+    const isSeekersWon = winner === 'seekers';
+    const aIsWinner = isSeekersWon ? (a.role === 'seeker') : (a.role === 'hider' && a.isAlive !== false);
+    const bIsWinner = isSeekersWon ? (b.role === 'seeker') : (b.role === 'hider' && b.isAlive !== false);
+
+    if (aIsWinner && !bIsWinner) return -1;
+    if (!aIsWinner && bIsWinner) return 1;
+
+    if (aIsWinner && bIsWinner) {
+      if (isSeekersWon) {
+        if (a.initialRole === 'seeker' && b.initialRole !== 'seeker') return -1;
+        if (a.initialRole !== 'seeker' && b.initialRole === 'seeker') return 1;
+        if ((b.catchesCount || 0) !== (a.catchesCount || 0)) {
+          return (b.catchesCount || 0) - (a.catchesCount || 0);
+        }
+        return (b.survivalTime || 0) - (a.survivalTime || 0);
+      } else {
+        return (b.survivalTime || 0) - (a.survivalTime || 0);
+      }
+    } else {
+      if ((b.survivalTime || 0) !== (a.survivalTime || 0)) {
+        return (b.survivalTime || 0) - (a.survivalTime || 0);
+      }
+      return (b.catchesCount || 0) - (a.catchesCount || 0);
+    }
+  });
 }
 
 function getRoomByPlayer(socketId) {
@@ -333,7 +401,13 @@ io.on('connection', (socket) => {
     const shuffled = [...playerList].sort(() => Math.random() - 0.5);
     shuffled.forEach((p, idx) => {
       p.role = idx < seekerCount ? 'seeker' : 'hider';
+      p.initialRole = p.role;
       p.isAlive = true;
+      p.survivalTime = null;
+      p.caughtAt = null;
+      p.caughtBy = null;
+      p.caughtPhoto = null;
+      p.catchesCount = 0;
     });
 
     room.phase = 'HIDING';
@@ -390,13 +464,19 @@ io.on('connection', (socket) => {
           if (room.phase === 'ENDED') return;
           clearRoomTimers(room);
           room.phase = 'ENDED';
-          const playersArr = getPlayersArray(room);
+          const totalDuration = room.startedAt ? Math.max(1, Math.floor((Date.now() - room.startedAt) / 1000)) : 0;
+          Object.values(room.players).forEach(p => {
+            if (p.role === 'hider' && p.isAlive && !p.survivalTime) {
+              p.survivalTime = totalDuration;
+            }
+          });
+          const rankingArr = computeRanking(room, 'hiders');
           io.to(room.code).emit('game_over', {
             winner: 'hiders',
             reason: 'time_up',
-            duration: room.startedAt ? Math.floor((Date.now() - room.startedAt) / 1000) : 0,
-            players: playersArr,
-            ranking: playersArr,
+            duration: totalDuration,
+            players: rankingArr,
+            ranking: rankingArr,
             roomCode: room.code,
           });
           console.log(`[Partida ${room.code}] Fin de tiempo: Ganaron los Hiders`);
@@ -501,6 +581,14 @@ io.on('connection', (socket) => {
     }
 
     if (caughtTarget) {
+      const now = Date.now();
+      if (!caughtTarget.survivalTime && caughtTarget.role === 'hider') {
+        caughtTarget.survivalTime = room.startedAt ? Math.max(1, Math.floor((now - room.startedAt) / 1000)) : 0;
+        caughtTarget.caughtAt = now;
+      }
+      seeker.catchesCount = (seeker.catchesCount || 0) + 1;
+      caughtTarget.caughtBy = seeker.name;
+
       const becomesSeeker = room.settings.caughtBecomesSeeker;
       if (becomesSeeker) {
         caughtTarget.role = 'seeker';
@@ -524,13 +612,14 @@ io.on('connection', (socket) => {
       if (remainingHiders.length === 0) {
         clearRoomTimers(room);
         room.phase = 'ENDED';
-        const playersArr = getPlayersArray(room);
+        const totalDuration = room.startedAt ? Math.max(1, Math.floor((Date.now() - room.startedAt) / 1000)) : 0;
+        const rankingArr = computeRanking(room, 'seekers');
         io.to(room.code).emit('game_over', {
           winner: 'seekers',
           reason: 'all_caught',
-          duration: room.startedAt ? Math.floor((Date.now() - room.startedAt) / 1000) : 0,
-          players: playersArr,
-          ranking: playersArr,
+          duration: totalDuration,
+          players: rankingArr,
+          ranking: rankingArr,
           roomCode: room.code,
         });
       }
@@ -564,10 +653,17 @@ io.on('connection', (socket) => {
     if (!catcher || catcher.role !== 'seeker') return;
     if (!target || !target.isAlive || target.role !== 'hider') return;
 
+    const now = Date.now();
+    if (!target.survivalTime && target.role === 'hider') {
+      target.survivalTime = room.startedAt ? Math.max(1, Math.floor((now - room.startedAt) / 1000)) : 0;
+      target.caughtAt = now;
+    }
+    catcher.catchesCount = (catcher.catchesCount || 0) + 1;
+    target.caughtBy = catcher.name;
+
     if (photo && room.settings.photoEnabled) {
       target.caughtPhoto = photo;
     }
-    target.caughtBy = catcher.name;
 
     const becomesSeeker = room.settings.caughtBecomesSeeker;
     if (becomesSeeker) {
@@ -592,13 +688,14 @@ io.on('connection', (socket) => {
     if (remainingHiders.length === 0) {
       clearRoomTimers(room);
       room.phase = 'ENDED';
-      const playersArr = getPlayersArray(room);
+      const totalDuration = room.startedAt ? Math.max(1, Math.floor((Date.now() - room.startedAt) / 1000)) : 0;
+      const rankingArr = computeRanking(room, 'seekers');
       io.to(room.code).emit('game_over', {
         winner: 'seekers',
         reason: 'all_caught',
-        duration: room.startedAt ? Math.floor((Date.now() - room.startedAt) / 1000) : 0,
-        players: playersArr,
-        ranking: playersArr,
+        duration: totalDuration,
+        players: rankingArr,
+        ranking: rankingArr,
         roomCode: room.code,
       });
     }
