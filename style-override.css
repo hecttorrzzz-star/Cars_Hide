@@ -1579,6 +1579,8 @@ small {
   position: relative !important;
   z-index: 10 !important;
   transition: transform 0.12s ease, filter 0.12s ease !important;
+}
+
 .chat-send {
   touch-action: manipulation !important;
   -webkit-tap-highlight-color: transparent !important;
@@ -1594,39 +1596,46 @@ small {
   filter: brightness(1.2) !important;
 }
 
-.catch-panel {
+/* ─────────────────────────────────────────────
+   PANEL DE CAPTURA ("¡LO ENCONTRÉ!")
+──────────────────────────────────────────────── */
+.catch-panel,
+#catch-panel {
   position: fixed !important;
-  bottom: 90px !important;
+  bottom: 96px !important;
   left: 16px !important;
   right: 16px !important;
   max-width: 460px !important;
   margin: 0 auto !important;
-  z-index: 14000 !important;
+  z-index: 20000 !important;
   pointer-events: none !important;
   opacity: 0 !important;
   visibility: hidden !important;
-  transform: translateY(16px) !important;
+  transform: translateY(20px) !important;
   transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0.22s ease !important;
-  background: var(--color-bg-glass-heavy) !important;
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.18) !important;
+  background: rgba(22, 24, 31, 0.96) !important;
+  backdrop-filter: blur(28px) saturate(1.8) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(1.8) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.22) !important;
   border-radius: var(--radius-lg) !important;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8) !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85), 0 0 30px rgba(0, 0, 0, 0.5) !important;
   overflow: hidden !important;
-  max-height: 50vh !important;
+  max-height: 55vh !important;
   display: flex !important;
   flex-direction: column !important;
 }
 
-.catch-panel.open {
+.catch-panel.open,
+#catch-panel.open {
   pointer-events: auto !important;
   visibility: visible !important;
   opacity: 1 !important;
   transform: translateY(0) !important;
+  z-index: 20000 !important;
 }
 
-.catch-panel.open * {
+.catch-panel.open *,
+#catch-panel.open * {
   pointer-events: auto !important;
 }
 
