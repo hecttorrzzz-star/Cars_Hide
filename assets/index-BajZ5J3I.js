@@ -421,7 +421,7 @@ var Qu=Object.defineProperty;var tl=(_,u,c)=>u in _?Qu(_,u,{enumerable:!0,config
             <polygon points="12,2 22,22 12,17 2,22" fill="${u}" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
           </svg>
         </div>
-        <div class="player-name-label" style="color: ${u};">${c}</div>
+        <div class="player-name-label" style="border-left: 3px solid ${u}; color: #FFFFFF;">${c}</div>
       </div>
     `}addPlayer(u){if(!this.map||this.markers.has(u.id))return;if(u.lat===void 0||u.lat===null||u.lng===void 0||u.lng===null||isNaN(u.lat)||isNaN(u.lng))return;const c=u.id===(ut?ut.getId():""),g=u.carColor||"#ffffff",w=this._createMarkerHtml(g,u.name,c),G=re.divIcon({html:w,className:"custom-player-marker",iconSize:[40,60],iconAnchor:[20,16]}),S=re.marker([u.lat,u.lng],{icon:G,zIndexOffset:c?1e3:0}).addTo(this.map);S._heading=u.heading||0,setTimeout(()=>{this._applyRotation(S,S._heading)},50),this.markers.set(u.id,S)}updatePlayer(u,{lat:c,lng:g,heading:w}){if(c===void 0||c===null||g===void 0||g===null||isNaN(c)||isNaN(g))return;const G=this.markers.get(u);G&&(G.setLatLng([c,g]),w!==void 0&&(this._applyRotation(G,w),G._heading=w))}_applyRotation(u,c){const g=u.getElement();if(g){const w=g.querySelector(".car-icon-wrapper");w&&(w.style.transform=`rotate(${c}deg)`,w.style.transition="transform 0.3s ease-out")}}removePlayer(u){const c=this.markers.get(u);c&&this.map&&(this.map.removeLayer(c),this.markers.delete(u))}showDeathMarker(u){if(!this.map||!u||!u.lat||!u.lng)return;const g=re.divIcon({html:`
       <div class="death-marker">
