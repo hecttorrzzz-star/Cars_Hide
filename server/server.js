@@ -211,13 +211,34 @@ function getDistanceMeters(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-function shrinkPolygon(geoJson, factor = 0.72) {
+function getCoordinatesFromGeoJson(geoJson) {
   if (!geoJson) return null;
   try {
-    const coords = geoJson.geometry ? geoJson.geometry.coordinates[0] : (geoJson.coordinates ? geoJson.coordinates[0] : null);
+    if (geoJson.geometry && geoJson.geometry.coordinates) {
+      return geoJson.geometry.coordinates[0];
+    }
+    if (geoJson.coordinates) {
+      return geoJson.coordinates[0];
+    }
+    if (geoJson.features && geoJson.features.length > 0) {
+      const f = geoJson.features[0];
+      return f.geometry ? f.geometry.coordinates[0] : (f.coordinates ? f.coordinates[0] : null);
+    }
+  } catch (e) {
+    return null;
+  }
+  return null;
+}
+
+function shrinkPolygon(geoJson, factor = 0.70) {
+  if (!geoJson) return null;
+  try {
+    const coords = getCoordinatesFromGeoJson(geoJson);
     if (!coords || coords.length < 3) return null;
+
     let sumLat = 0, sumLng = 0;
-    const n = coords.length - 1;
+    const isClosed = coords.length > 1 && coords[0][0] === coords[coords.length - 1][0] && coords[0][1] === coords[coords.length - 1][1];
+    const n = isClosed ? coords.length - 1 : coords.length;
     for (let i = 0; i < n; i++) {
       sumLng += coords[i][0];
       sumLat += coords[i][1];
@@ -237,8 +258,126 @@ function shrinkPolygon(geoJson, factor = 0.72) {
       properties: {}
     };
   } catch (e) {
+    console.error('[shrinkPolygon] Error:', e);
     return null;
   }
+}
+
+function isPointInPolygon(lat, lng, geoJson) {
+  if (lat == null || lng == null || !geoJson) return true;
+  const coords = getCoordinatesFromGeoJson(geoJson);
+  if (!coords || coords.length < 3) return true;
+
+  let inside = false;
+  for (let i = 0, j = coords.length - 1; i < coords.length; j = i++) {
+    const xi = coords[i][0], yi = coords[i][1];
+    const xj = coords[j][0], yj = coords[j][1];
+    const intersect = ((yi > lat) !== (yj > lat)) &&
+      (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function checkPlayerOutsideZone(room, p, socketObj) {
+  if (!room || !room.currentZone || (room.phase !== 'SEEKING' && room.phase !== 'ZONE_WARNING')) return;
+  if (!p || !p.isAlive || p.lat == null || p.lng == null) return;
+
+  const isInside = isPointInPolygon(p.lat, p.lng, room.currentZone);
+  const limitSec = room.settings.outsideZoneLimit || 30;
+
+  if (!isInside) {
+    if (!p.outsideSince) {
+      p.outsideSince = Date.now();
+    }
+    const elapsedSec = Math.floor((Date.now() - p.outsideSince) / 1000);
+    const remainingSec = Math.max(0, limitSec - elapsedSec);
+
+    if (socketObj) {
+      socketObj.emit('outside_zone_warning', {
+        isOutside: true,
+        remainingSec: remainingSec,
+        limitSec: limitSec
+      });
+    }
+
+    if (elapsedSec >= limitSec) {
+      console.log(`[Tormenta] ${p.name} superó el tiempo fuera de zona (${limitSec}s) en sala ${room.code}`);
+      p.outsideSince = null;
+      if (socketObj) {
+        socketObj.emit('outside_zone_warning', { isOutside: false });
+      }
+
+      const totalDuration = room.startedAt ? Math.max(1, Math.floor((Date.now() - room.startedAt) / 1000)) : 0;
+      if (p.role === 'hider' && !p.survivalTime) {
+        p.survivalTime = totalDuration;
+      }
+
+      if (room.settings.eliminatedBecomesSeeker) {
+        p.role = 'seeker';
+        p.isAlive = true;
+        io.to(room.code).emit('player_role_changed', {
+          playerId: p.id,
+          newRole: 'seeker',
+          reason: 'outside_zone'
+        });
+        io.to(room.code).emit('chat_message', {
+          type: 'system',
+          senderId: 'system',
+          playerName: 'Sistema',
+          carColor: '#FF453A',
+          message: `☠️ ${p.name} ha muerto fuera de zona y ahora es BUSCADOR.`,
+          timestamp: Date.now()
+        });
+      } else {
+        p.isAlive = false;
+        io.to(room.code).emit('player_eliminated', {
+          playerId: p.id,
+          playerName: p.name,
+          reason: 'outside_zone'
+        });
+        io.to(room.code).emit('chat_message', {
+          type: 'system',
+          senderId: 'system',
+          playerName: 'Sistema',
+          carColor: '#FF453A',
+          message: `☠️ ${p.name} ha sido eliminado por la tormenta (fuera de zona).`,
+          timestamp: Date.now()
+        });
+      }
+
+      const remainingHiders = Object.values(room.players).filter(pl => pl.role === 'hider' && pl.isAlive);
+      if (remainingHiders.length === 0) {
+        clearRoomTimers(room);
+        room.phase = 'ENDED';
+        const rankingArr = computeRanking(room, 'seekers');
+        io.to(room.code).emit('game_over', {
+          winner: 'seekers',
+          reason: 'all_caught',
+          duration: totalDuration,
+          players: rankingArr,
+          ranking: rankingArr,
+          roomCode: room.code,
+        });
+        console.log(`[Partida ${room.code}] Fin de partida: Todos los hiders eliminados`);
+      }
+    }
+  } else {
+    if (p.outsideSince) {
+      p.outsideSince = null;
+      if (socketObj) {
+        socketObj.emit('outside_zone_warning', { isOutside: false });
+      }
+    }
+  }
+}
+
+function checkAllPlayersZone(room) {
+  if (!room || (room.phase !== 'SEEKING' && room.phase !== 'ZONE_WARNING')) return;
+  Object.values(room.players).forEach(p => {
+    const s = io.sockets.sockets.get(p.id);
+    checkPlayerOutsideZone(room, p, s);
+  });
 }
 
 function triggerSonarPing(room) {
@@ -275,35 +414,97 @@ function triggerSonarPing(room) {
   console.log(`[Sonar Ping] Emitidos ${sectors.length} sectores en sala ${room.code}`);
 }
 
-function scheduleZoneShrinking(room) {
+function startZoneCycle(room) {
   if (!room || !room.currentZone || room.phase === 'ENDED') return;
 
   const shrinkIntervalMs = (room.settings.zoneShrinkInterval || 300) * 1000;
+
+  room.zoneEndsAt = Date.now() + shrinkIntervalMs;
+
+  io.to(room.code).emit('phase_change', {
+    phase: 'SEEKING',
+    phaseEndsAt: room.zoneEndsAt,
+    gameEndsAt: room.gameEndsAt,
+  });
+
+  if (!room.timers.zoneCheckInterval) {
+    room.timers.zoneCheckInterval = setInterval(() => checkAllPlayersZone(room), 1000);
+  }
+
+  room.timers.zoneTimer = setTimeout(() => {
+    runZoneShrinkWarning(room);
+  }, shrinkIntervalMs);
+}
+
+function runZoneShrinkWarning(room) {
+  if (!room || room.phase === 'ENDED') return;
+
+  const nextZone = shrinkPolygon(room.currentZone, 0.70);
+  if (!nextZone) return;
+
   const transitionTimeMs = (room.settings.zoneTransitionTime || 120) * 1000;
+  room.phase = 'ZONE_WARNING';
+  room.nextZone = nextZone;
+  room.zoneEndsAt = Date.now() + transitionTimeMs;
 
-  room.timers.zoneInterval = setInterval(() => {
-    if (room.phase === 'ENDED') return;
+  io.to(room.code).emit('phase_change', {
+    phase: 'ZONE_WARNING',
+    phaseEndsAt: room.zoneEndsAt,
+    gameEndsAt: room.gameEndsAt,
+  });
 
-    const nextZone = shrinkPolygon(room.currentZone, 0.70);
-    if (!nextZone) return;
+  io.to(room.code).emit('zone_shrinking', {
+    nextZone: nextZone,
+    transitionTime: room.settings.zoneTransitionTime,
+    zoneEndsAt: room.zoneEndsAt,
+  });
 
-    room.phase = 'ZONE_WARNING';
-    io.to(room.code).emit('zone_shrinking', {
-      nextZone: nextZone,
-      transitionTime: room.settings.zoneTransitionTime,
-    });
+  io.to(room.code).emit('chat_message', {
+    type: 'system',
+    senderId: 'system',
+    playerName: 'Sistema',
+    carColor: '#FF9500',
+    message: '⚠️ ¡ALERTA DE ZONA! La zona se está reduciendo hacia la línea discontinua amarilla.',
+    timestamp: Date.now()
+  });
 
-    room.timers.zoneTransition = setTimeout(() => {
-      if (room.phase === 'ENDED') return;
-      room.currentZone = nextZone;
-      room.phase = 'SEEKING';
-      io.to(room.code).emit('zone_updated', {
-        currentZone: room.currentZone,
-      });
-      console.log(`[Zona Actualizada] Reducida en sala ${room.code}`);
-    }, transitionTimeMs);
+  room.timers.zoneTransition = setTimeout(() => {
+    finalizeZoneShrink(room);
+  }, transitionTimeMs);
+}
 
-  }, shrinkIntervalMs + transitionTimeMs);
+function finalizeZoneShrink(room) {
+  if (!room || room.phase === 'ENDED') return;
+
+  room.currentZone = room.nextZone;
+  room.nextZone = null;
+  room.phase = 'SEEKING';
+
+  const shrinkIntervalMs = (room.settings.zoneShrinkInterval || 300) * 1000;
+  room.zoneEndsAt = Date.now() + shrinkIntervalMs;
+
+  io.to(room.code).emit('zone_updated', {
+    currentZone: room.currentZone,
+  });
+
+  io.to(room.code).emit('phase_change', {
+    phase: 'SEEKING',
+    phaseEndsAt: room.zoneEndsAt,
+    gameEndsAt: room.gameEndsAt,
+  });
+
+  io.to(room.code).emit('chat_message', {
+    type: 'system',
+    senderId: 'system',
+    playerName: 'Sistema',
+    carColor: '#30D158',
+    message: '⚡ ¡ZONA CERRADA! La tormenta ha avanzado. Permanece dentro del perímetro seguro.',
+    timestamp: Date.now()
+  });
+
+  room.timers.zoneTimer = setTimeout(() => {
+    runZoneShrinkWarning(room);
+  }, shrinkIntervalMs);
 }
 
 function clearRoomTimers(room) {
@@ -414,6 +615,8 @@ io.on('connection', (socket) => {
     room.startedAt = Date.now();
     const hideTimeMs = (room.settings.hideTime || 300) * 1000;
     const phaseEndsAt = Date.now() + hideTimeMs;
+    const gameDurationMs = room.settings.infiniteMode ? 0 : (room.settings.gameDuration || 1800) * 1000;
+    room.gameEndsAt = gameDurationMs > 0 ? (phaseEndsAt + gameDurationMs) : 0;
 
     playerList.forEach(p => {
       const socketObj = io.sockets.sockets.get(p.id);
@@ -421,6 +624,7 @@ io.on('connection', (socket) => {
         socketObj.emit('game_started', {
           phase: 'HIDING',
           phaseEndsAt: phaseEndsAt,
+          gameEndsAt: room.gameEndsAt,
           yourRole: p.role,
           players: getPlayersArray(room),
           zone: room.zone,
@@ -433,30 +637,16 @@ io.on('connection', (socket) => {
     room.timers.hideTimer = setTimeout(() => {
       if (room.phase === 'ENDED') return;
       room.phase = 'SEEKING';
-      const gameDurationMs = room.settings.infiniteMode ? 0 : (room.settings.gameDuration || 1800) * 1000;
       const seekEndsAt = gameDurationMs > 0 ? Date.now() + gameDurationMs : 0;
+      room.gameEndsAt = seekEndsAt;
 
-      playerList.forEach(p => {
-        const s = io.sockets.sockets.get(p.id);
-        if (s) {
-          s.emit('phase_change', {
-            phase: 'SEEKING',
-            phaseEndsAt: seekEndsAt,
-          });
-        }
-      });
-      io.to(room.code).emit('phase_change', {
-        phase: 'SEEKING',
-        phaseEndsAt: seekEndsAt,
-      });
+      // Iniciar ciclo de reducción de zona
+      startZoneCycle(room);
 
       // Sonar periódico si está activado (cada 4 min)
       if (room.settings.sonarEnabled) {
         room.timers.sonarInterval = setInterval(() => triggerSonarPing(room), 240_000);
       }
-
-      // Encogimiento de zona periódico
-      scheduleZoneShrinking(room);
 
       // Fin de partida por tiempo (si no es infinito)
       if (!room.settings.infiniteMode && gameDurationMs > 0) {
@@ -500,6 +690,9 @@ io.on('connection', (socket) => {
     p.lat = pos.lat;
     p.lng = pos.lng;
     p.heading = pos.heading || 0;
+
+    // Verificar zona segura / tormenta para este jugador
+    checkPlayerOutsideZone(room, p, socket);
 
     // Buscadores vivos con posición
     const activeSeekers = Object.values(room.players)

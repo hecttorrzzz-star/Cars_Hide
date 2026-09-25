@@ -1675,3 +1675,121 @@ small {
   box-shadow: 0 0 12px rgba(255, 255, 255, 0.3) !important;
 }
 
+/* ─────────────────────────────────────────────
+   CRONÓMETROS DUALES Y ALERTAS DE ZONA / TORMENTA
+──────────────────────────────────────────────── */
+.hud-timers-group {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.hud-timer {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  min-width: 68px !important;
+  padding: 6px 12px !important;
+}
+
+.hud-timer-label {
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  color: var(--color-text-dim) !important;
+  line-height: 1.1 !important;
+}
+
+.hud-timer-value {
+  font-size: 1.05rem !important;
+  font-weight: 850 !important;
+  font-family: var(--font-mono, monospace) !important;
+  letter-spacing: -0.02em !important;
+  color: var(--color-text) !important;
+  line-height: 1.2 !important;
+}
+
+.hud-timer-zone.zone-closing,
+.hud-timer-value.danger {
+  color: var(--color-danger) !important;
+  animation: pulse-danger-timer 1s infinite alternate !important;
+}
+
+.hud-timer-value.warning {
+  color: var(--color-warning) !important;
+}
+
+@keyframes pulse-danger-timer {
+  0% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(255, 69, 58, 0.4)); }
+  100% { transform: scale(1.06); filter: drop-shadow(0 0 8px rgba(255, 69, 58, 0.9)); }
+}
+
+/* Banner de Aviso: Zona Reduciéndose */
+.hud-zone-warning {
+  position: fixed !important;
+  top: calc(var(--navbar-height, 64px) + 68px) !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 1200 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 8px 18px !important;
+  background: rgba(255, 149, 0, 0.92) !important;
+  color: #0E1015 !important;
+  font-size: 0.85rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.02em !important;
+  border-radius: var(--radius-pill) !important;
+  box-shadow: 0 4px 20px rgba(255, 149, 0, 0.5), 0 0 12px rgba(255, 214, 10, 0.4) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  animation: banner-bounce 2s infinite ease-in-out !important;
+  pointer-events: none !important;
+  white-space: nowrap !important;
+}
+
+.hud-zone-warning.hidden {
+  display: none !important;
+}
+
+@keyframes banner-bounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-3px); }
+}
+
+/* Barra de Alerta: Fuera de Zona (Tormenta) */
+.outside-zone-bar {
+  position: fixed !important;
+  top: calc(var(--navbar-height, 64px) + 72px) !important;
+  left: 16px !important;
+  right: 16px !important;
+  max-width: 440px !important;
+  margin: 0 auto !important;
+  z-index: 1400 !important;
+  padding: 12px 18px !important;
+  background: rgba(255, 69, 58, 0.94) !important;
+  color: #FFFFFF !important;
+  font-size: 0.88rem !important;
+  font-weight: 750 !important;
+  text-align: center !important;
+  border-radius: var(--radius) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.35) !important;
+  box-shadow: 0 8px 32px rgba(255, 69, 58, 0.6), 0 0 20px rgba(255, 69, 58, 0.4) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  animation: pulse-outside-zone 1.2s infinite alternate !important;
+  pointer-events: none !important;
+}
+
+.outside-zone-bar.hidden {
+  display: none !important;
+}
+
+@keyframes pulse-outside-zone {
+  0% { transform: scale(1); box-shadow: 0 8px 32px rgba(255, 69, 58, 0.6); }
+  100% { transform: scale(1.02); box-shadow: 0 10px 40px rgba(255, 69, 58, 0.9); }
+}
+
