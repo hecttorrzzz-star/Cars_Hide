@@ -109,6 +109,7 @@ function normalizeSettings(s = {}) {
     caughtBecomesSeeker: s.caughtBecomesSeeker       !== false,
     eliminatedBecomesSeeker: s.eliminatedBecomesSeeker !== false,
     sonarEnabled:       Boolean(s.sonarEnabled),
+    sonarInterval:      Math.max(10, Math.floor(Number(s.sonarInterval) || 180)),
     photoEnabled:       Boolean(s.photoEnabled),
   };
 }
@@ -720,9 +721,10 @@ io.on('connection', (socket) => {
       // Iniciar ciclo de reducción de zona
       startZoneCycle(room);
 
-      // Sonar periódico si está activado (cada 4 min)
+      // Sonar periódico si está activado
       if (room.settings.sonarEnabled) {
-        room.timers.sonarInterval = setInterval(() => triggerSonarPing(room), 240_000);
+        const sonarIntervalMs = (room.settings.sonarInterval || 180) * 1000;
+        room.timers.sonarInterval = setInterval(() => triggerSonarPing(room), sonarIntervalMs);
       }
 
       // Fin de partida por tiempo (si no es infinito)
