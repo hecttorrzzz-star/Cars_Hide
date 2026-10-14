@@ -11,9 +11,9 @@ const path       = require('path');
 const app        = express();
 const httpServer = createServer(app);
 const io         = new Server(httpServer, {
-  cors: { origin: '*' },
+  cors: { origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : '*' },
   transports: ['websocket', 'polling'],
-  maxHttpBufferSize: 1e7,
+  maxHttpBufferSize: 4e6,
 });
 
 const PORT = process.env.PORT || 3000;
@@ -21,7 +21,7 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname, '..')));
 
 const APP_RELEASE = {
-  version: "1.3.0",
+  version: require('../package.json').version,
   deployedAt: "2026-09-19 17:22 (UTC+2)",
   latestCommit: "0ac3164",
   features: [
@@ -111,6 +111,7 @@ function normalizeSettings(s = {}) {
     sonarEnabled:       Boolean(s.sonarEnabled),
     sonarInterval:      Math.max(10, Math.floor(Number(s.sonarInterval) || 180)),
     photoEnabled:       Boolean(s.photoEnabled),
+    catchRadius:        Math.min(2000, Math.max(30, Math.floor(Number(s.catchRadius) || 300))),
   };
 }
 
@@ -766,9 +767,17 @@ io.on('connection', (socket) => {
     const p = room.players[socket.id];
     if (!p || !p.isAlive) return;
 
-    p.lat = pos.lat;
-    p.lng = pos.lng;
-    p.heading = pos.heading || 0;
+    const lat = Number(pos && pos.lat);
+    const lng = Number(pos && pos.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return;
+
+    const now = Date.now();
+    if (p.lastPosAt && now - p.lastPosAt < 400) return; // límite de frecuencia
+    p.lastPosAt = now;
+
+    p.lat = lat;
+    p.lng = lng;
+    p.heading = Number(pos.heading) || 0;
 
     // Verificar zona segura / tormenta para este jugador
     checkPlayerOutsideZone(room, p, socket);
@@ -815,22 +824,25 @@ io.on('connection', (socket) => {
   // 6. CAPTURAR JUGADOR ("¡LO ENCONTRÉ!")
   socket.on('catch_player', (data) => {
     const { targetId, photo } = data || {};
-    let room = getRoomByPlayer(socket.id);
-    const roomCode = (typeof data === 'object' && data?.roomCode) ? data.roomCode.toUpperCase().trim() : null;
-    if (!room && roomCode && rooms[roomCode]) {
-      room = rooms[roomCode];
-      socket.join(roomCode);
-    }
+    const room = getRoomByPlayer(socket.id);
     if (!room || room.phase === 'LOBBY' || room.phase === 'ENDED') return;
 
-    let catcher = room.players[socket.id];
-    if (!catcher) {
-      catcher = Object.values(room.players).find(p => p.role === 'seeker');
-    }
+    const catcher = room.players[socket.id];
     const target = room.players[targetId];
 
-    if (!catcher || catcher.role !== 'seeker') return;
+    if (!catcher || catcher.role !== 'seeker' || !catcher.isAlive) return;
     if (!target || !target.isAlive || target.role !== 'hider') return;
+
+    // Cooldown anti-spam entre capturas del mismo buscador
+    if (catcher.lastCatchAt && Date.now() - catcher.lastCatchAt < 2000) return;
+
+    // Validación de proximidad por GPS (solo si ambos tienen posición conocida)
+    const dist = getDistanceMeters(catcher.lat, catcher.lng, target.lat, target.lng);
+    if (Number.isFinite(dist) && dist > room.settings.catchRadius) {
+      socket.emit('error', { message: `Estás demasiado lejos para cazar a ${target.name} (${Math.round(dist)} m)` });
+      return;
+    }
+    catcher.lastCatchAt = Date.now();
 
     const now = Date.now();
     if (!target.survivalTime && target.role === 'hider') {
@@ -840,7 +852,7 @@ io.on('connection', (socket) => {
     catcher.catchesCount = (catcher.catchesCount || 0) + 1;
     target.caughtBy = catcher.name;
 
-    if (photo && room.settings.photoEnabled) {
+    if (photo && typeof photo === 'string' && photo.length < 3e6 && room.settings.photoEnabled) {
       target.caughtPhoto = photo;
     }
 
