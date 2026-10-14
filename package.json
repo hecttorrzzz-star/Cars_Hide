@@ -1,6 +1,6 @@
 {
   "name": "cars-hide",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Car Hide - Real-time multiplayer car hide and seek",
   "main": "server/server.js",
   "scripts": {

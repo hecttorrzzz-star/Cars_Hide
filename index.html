@@ -2,28 +2,42 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="description" content="Car Hide — Juego multijugador de escondite con coches. Escóndete, sobrevive a la tormenta y gana." />
-  <meta name="theme-color" content="#0a0e17" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="description" content="Escondite con coches en tiempo real. Escóndete en la ciudad, sobrevive a la tormenta y que no te pille el buscador. Siempre con copiloto." />
+  <meta name="theme-color" content="#07080b" />
+  <meta name="color-scheme" content="dark" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>Car Hide — Escondite con Coches</title>
-  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com/" />
-  <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin />
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
-  <script src="assets/filter-engine.js"></script>
-  <script type="module" crossorigin src="assets/index-BajZ5J3I.js"></script>
-  <link rel="stylesheet" crossorigin href="assets/index-DYysjeVV.css">
-  <link rel="stylesheet" href="style-override.css">
+  <meta name="apple-mobile-web-app-title" content="Car Hide" />
+  <meta name="format-detection" content="telephone=no" />
+
+  <!-- Compartir el enlace de la sala -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Car Hide" />
+  <meta property="og:title" content="Car Hide · Escondite con coches" />
+  <meta property="og:description" content="Escóndete en la ciudad, sobrevive a la tormenta y que no te pille el buscador." />
+  <meta property="og:image" content="/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <title>Car Hide · Escondite con coches</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+
+  <!-- Filtros faciales de resultados: no bloquean el primer pintado -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js" crossorigin="anonymous"></script>
+  <script defer src="./filter-engine.js"></script>
   <script>
-    window.APP_VERSION = "1.3.0";
+    window.APP_VERSION = "1.4.0";
     window.version = window.checkVersion = async function() {
       try {
         const res = await fetch('/version?t=' + Date.now());
         const data = await res.json();
-        console.log("%c🚗 CAR HIDE — CONTROL DE VERSIONES", "color:#FF9500; font-size:15px; font-weight:bold; background:#16181F; padding:4px 10px; border-radius:6px;");
+        console.log("%c🚗 CAR HIDE — CONTROL DE VERSIONES", "color:#FF9F0A; font-size:15px; font-weight:bold; background:#14161B; padding:4px 10px; border-radius:6px;");
         console.table({
           "Versión Actual": data.version,
           "Último Despliegue": data.deployedAt,
@@ -31,17 +45,19 @@
           "Estado Servidor": data.status
         });
         console.log("%c✨ Novedades y Añadidos en esta Versión:", "color:#30D158; font-weight:bold; font-size:13px;");
-        data.features.forEach((f, i) => console.log(`  ${i + 1}. ${f}`));
+        (data.features || []).forEach((f, i) => console.log(`  ${i + 1}. ${f}`));
         return "✅ Versión verificada con éxito.";
       } catch (e) {
         console.warn("Error al consultar el servidor:", e);
         return "⚠️ No se pudo consultar la versión.";
       }
     };
-    console.log("%c💡 Escribe version() en la consola para comprobar la última versión y novedades.", "color:#007AFF; font-weight:600;");
   </script>
+  <script type="module" crossorigin src="./assets/index-DtfOnA-T.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-bpZfJT0h.css">
 </head>
 <body>
   <div id="app"></div>
+  <noscript>Car Hide necesita JavaScript para funcionar.</noscript>
 </body>
 </html>

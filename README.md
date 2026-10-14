@@ -35,6 +35,19 @@ El backend en Node.js + WebSockets puede alojarse directamente en Render:
 
 ---
 
+## 🎨 Frontend
+
+El frontend editable vive en [`frontend/`](frontend/README.md) (Vite). Para cambiar la interfaz:
+
+```bash
+cd frontend
+npm install
+npm run dev       # desarrollo con recarga en caliente
+npm run release   # compila y copia el build a la raíz, que es lo que se despliega
+```
+
+---
+
 ## 💻 Ejecución Local
 
 ### 1. Clonar el repositorio

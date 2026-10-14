@@ -1,4 +1,6 @@
 import "./style.css";
+import "./theme.css";
+import { mount, toast, haptic } from "./fluid.js";
 var Qu = Object.defineProperty;
 var tl = (_, u, c) =>
   u in _
@@ -57,15 +59,22 @@ class el {
       (w.id = `screen-${u}`),
       (w.className = "screen"),
       document.getElementById("app").appendChild(w));
+    // Vacía la pantalla que se abandona: si no, sus ids (chat-input,
+    // chat-messages…) quedan duplicados y getElementById apunta a la oculta.
+    g && g !== w && (g.innerHTML = "");
     const G = this.routes.get(u);
-    ((w.innerHTML = ""),
-      G(w, c),
+    (window.scrollTo(0, 0),
+      w.classList.remove("is-scrolled"),
+      (w.innerHTML = ""),
+      // Visible antes de pintar: Leaflet necesita el tamaño real del contenedor
       w.classList.add("active", "screen-enter"),
+      G(w, c),
       (this.currentScreen = u),
+      mount(u, w),
       this.onNavigate && this.onNavigate(u, c),
       setTimeout(() => {
         w.classList.remove("screen-enter");
-      }, 300));
+      }, 650));
   }
   getCurrent() {
     return this.currentScreen;
@@ -2393,6 +2402,17 @@ const ut = new Wl(),
       '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>',
     infinity:
       '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12c-2-2.67-4-4-6-4a4 4 0 1 0 0 8c2 0 4-1.33 6-4Zm0 0c2 2.67 4 4 6 4a4 4 0 0 0 0-8c-2 0-4 1.33-6 4Z"/></svg>',
+    download:
+      '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>',
+    chevronLeft:
+      '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>',
+    chevronDown:
+      '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
+    arrowUp:
+      '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>',
+    locate:
+      '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.5 3.5 3.9 10.4c-.8.3-.7 1.5.1 1.7l6.9 1.9 1.9 6.9c.2.8 1.4.9 1.7.1L21.4 4.4c.3-.6-.3-1.2-.9-.9Z"/></svg>',
+    flag: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V4"/><path d="M4 4h13l-2 4 2 4H4"/></svg>',
   };
 function wt(_, u = 24) {
   const c = Yl[_];
@@ -2430,139 +2450,145 @@ let Ut = {
 function Jl(_) {
   ((Ut.mode = "menu"),
     (_.innerHTML = `
-    <div class="screen-content" style="justify-content: center; padding-top: var(--space-xl);">
-      
-      <!-- Logo -->
-      <div class="text-center mb-lg" style="margin-top: auto;">
-        <div class="home-logo" style="display:inline-flex; align-items:center; justify-content:center; width:80px; height:80px; border-radius:20px; background:var(--color-bg-card); border:1px solid var(--color-border); margin-bottom:var(--space-md);">
-          ${wt("car", 40)}
-        </div>
-        <h1 style="font-size:2.5rem; line-height:1.1;">Car <span class="text-accent">Hide</span></h1>
-        <p style="margin-top:var(--space-xs);">Escondite con coches en tiempo real</p>
+    <div class="screen-content home">
+
+      <header class="home-hero">
+        <div class="app-mark" aria-hidden="true">${wt("car", 46)}</div>
+        <h1 class="wordmark">Car <span>Hide</span></h1>
+        <p class="home-tagline">Escondite con coches en tiempo real</p>
         <div class="safety-pill">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          <span>Modo copiloto obligatorio · Conduce con seguridad</span>
+          ${wt("shield", 14)}
+          <span>Juega siempre con copiloto</span>
         </div>
-      </div>
+      </header>
 
-      <!-- Formulario de jugador -->
-      <div id="home-form" class="flex-col gap-sm mt-lg">
-
-        <!-- Selfie de perfil (Solo cámara en directo) -->
-        <div class="selfie-section">
-          <div class="selfie-avatar-circle ${Ut.photo ? "has-photo" : ""}" id="selfie-avatar-trigger" title="Hacer foto con la cámara">
-            ${Ut.photo ? `<img src="${Ut.photo}" id="selfie-avatar-img" alt="Selfie" />` : wt("camera", 24)}
-          </div>
-          <div class="selfie-meta">
-            <div class="selfie-title">Foto de perfil <span style="font-size:0.75rem; color:var(--color-text-dim); font-weight:normal;">(Opcional)</span></div>
-            <div class="selfie-desc" id="selfie-desc-text">${Ut.photo ? "Foto de cámara lista" : "Hazte una foto para la partida (sólo cámara)"}</div>
+      <section class="group" id="home-form" aria-labelledby="home-profile-title">
+        <h2 class="group-title" id="home-profile-title">Tu jugador</h2>
+        <div class="list">
+          <div class="row selfie-section">
+            <button type="button" class="selfie-avatar-circle ${Ut.photo ? "has-photo" : ""}" id="selfie-avatar-trigger" aria-label="Hacer foto de perfil">
+              ${Ut.photo ? `<img src="${Ut.photo}" id="selfie-avatar-img" alt="Selfie" />` : wt("camera", 22)}
+            </button>
+            <div class="selfie-meta">
+              <div class="selfie-title">Foto de perfil</div>
+              <div class="selfie-desc" id="selfie-desc-text">${Ut.photo ? "Lista para la partida" : "Opcional · solo con la cámara"}</div>
+            </div>
             <div class="selfie-actions-row">
               <button type="button" class="btn-selfie-action" id="btn-trigger-camera">
-                ${Ut.photo ? "Cambiar Foto" : "Hacer Foto"}
+                ${Ut.photo ? "Cambiar" : "Hacer foto"}
               </button>
-              ${Ut.photo ? `<button type="button" class="btn-selfie-action btn-selfie-remove" id="btn-remove-selfie">Eliminar</button>` : ""}
+              ${Ut.photo ? `<button type="button" class="btn-selfie-action btn-selfie-remove" id="btn-remove-selfie">Quitar</button>` : ""}
+            </div>
+          </div>
+          <input type="file" id="camera-native-input" accept="image/*" capture="user" style="display:none;" />
+
+          <label class="row field" for="player-name">
+            <span class="field-label">Nombre</span>
+            <input
+              type="text"
+              id="player-name"
+              class="input field-input"
+              placeholder="Carlos"
+              value="${Ut.playerName}"
+              maxlength="20"
+              autocomplete="nickname"
+              enterkeyhint="next"
+            />
+          </label>
+
+          <label class="row field" for="car-model">
+            <span class="field-label">Coche</span>
+            <input
+              type="text"
+              id="car-model"
+              class="input field-input"
+              placeholder="Seat León negro"
+              value="${Ut.carModel}"
+              maxlength="30"
+              autocomplete="off"
+              enterkeyhint="done"
+            />
+          </label>
+
+          <div class="row field-stack">
+            <span class="field-label">Color del coche</span>
+            <div class="color-picker" id="color-picker" role="radiogroup" aria-label="Color del coche">
+              ${Xl.map(
+                (u) => `
+                <button
+                  type="button"
+                  class="color-swatch ${Ut.carColor === u.hex ? "selected" : ""}"
+                  data-color="${u.hex}"
+                  style="--swatch:${u.hex};"
+                  title="${u.name}"
+                  role="radio"
+                  aria-checked="${Ut.carColor === u.hex}"
+                  aria-label="${u.name}"
+                ></button>
+              `,
+              ).join("")}
             </div>
           </div>
         </div>
-        <input type="file" id="camera-native-input" accept="image/*" capture="user" style="display:none;" />
+        <p class="group-footer">Así te verán los demás jugadores en el mapa.</p>
+      </section>
 
-        <div class="input-group">
-          <label class="input-label" for="player-name">Tu nombre</label>
-          <input 
-            type="text" 
-            id="player-name" 
-            class="input" 
-            placeholder="Ej: Carlos"
-            value="${Ut.playerName}"
-            maxlength="20"
-            autocomplete="off"
-          />
-        </div>
-
-        <div class="input-group">
-          <label class="input-label" for="car-model">Modelo de coche</label>
-          <input 
-            type="text" 
-            id="car-model" 
-            class="input" 
-            placeholder="Ej: Seat León Negro"
-            value="${Ut.carModel}"
-            maxlength="30"
-            autocomplete="off"
-          />
-        </div>
-
-        <div class="input-group">
-          <label class="input-label">Color del coche</label>
-          <div class="color-picker" id="color-picker">
-            ${Xl.map(
-              (u) => `
-              <button 
-                class="color-swatch ${Ut.carColor === u.hex ? "selected" : ""}" 
-                data-color="${u.hex}" 
-                style="background:${u.hex};" 
-                title="${u.name}"
-                aria-label="Color ${u.name}"
-              ></button>
-            `,
-            ).join("")}
-          </div>
-        </div>
-      </div>
-
-      <!-- Botones principales -->
-      <div id="home-actions" class="flex-col gap-sm mt-lg" style="margin-bottom: auto;">
-        <button id="btn-create" class="btn btn-primary btn-lg glow-ring">
-          ${wt("plus")}
-          Crear Partida
+      <div id="home-actions" class="home-actions">
+        <button id="btn-create" class="btn btn-primary btn-lg">
+          ${wt("plus", 20)}
+          Crear partida
         </button>
-        
-        <div class="divider-text">o</div>
 
-        <div id="join-section" class="flex-col gap-sm">
-          <input 
-            type="text" 
-            id="game-code-input" 
-            class="input input-code" 
+        <div class="divider-text">o únete con un código</div>
+
+        <div id="join-section" class="join-row">
+          <input
+            type="text"
+            id="game-code-input"
+            class="input input-code"
             placeholder="CÓDIGO"
             maxlength="6"
             autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            enterkeyhint="go"
+            aria-label="Código de partida"
             value="${Ut.gameCode}"
           />
-          <button id="btn-join" class="btn btn-ghost btn-lg">
-            ${wt("users")}
-            Unirse a Partida
+          <button id="btn-join" class="btn btn-tinted btn-lg">
+            Unirse
           </button>
         </div>
       </div>
 
-      <!-- Footer -->
-      <div class="text-center mt-lg" style="padding-bottom: var(--space-md);">
-        <small>Mantén la app abierta durante la partida para el GPS</small>
-      </div>
+      <p class="home-footnote">
+        ${wt("mapPin", 14)}
+        Mantén la app abierta durante la partida para el GPS
+      </p>
     </div>
 
     <!-- Modal de Cámara en Directo -->
-    <div id="home-camera-modal" class="camera-modal-overlay hidden">
+    <div id="home-camera-modal" class="camera-modal-overlay hidden" role="dialog" aria-label="Cámara de perfil">
       <div class="camera-modal-container">
         <div class="camera-modal-header">
-          <span class="camera-modal-title">Cámara de Perfil</span>
-          <button type="button" id="btn-camera-close" class="btn-icon btn-ghost" style="border:none;">
-            ${wt("x", 20)}
+          <button type="button" id="btn-camera-close" class="sheet-close" aria-label="Cerrar cámara">
+            ${wt("x", 18)}
           </button>
+          <span class="camera-modal-title">Foto de perfil</span>
+          <span class="nav-spacer"></span>
         </div>
         <div class="camera-viewfinder-wrapper">
           <video id="selfie-camera-video" class="camera-live-video" autoplay playsinline muted></video>
           <div class="camera-face-guide"></div>
         </div>
         <div class="camera-controls-bar">
-          <button type="button" id="btn-camera-switch" class="btn btn-ghost btn-sm" title="Cambiar cámara">
-            ${wt("refresh", 18)}
-          </button>
-          <button type="button" id="btn-camera-shutter" class="btn-shutter" aria-label="Hacer Foto">
+          <span class="nav-spacer"></span>
+          <button type="button" id="btn-camera-shutter" class="btn-shutter" aria-label="Hacer foto">
             <div class="btn-shutter-inner"></div>
           </button>
-          <div style="width:40px;"></div>
+          <button type="button" id="btn-camera-switch" class="camera-switch" aria-label="Cambiar cámara">
+            ${wt("refresh", 20)}
+          </button>
         </div>
       </div>
     </div>
@@ -2619,14 +2645,14 @@ function Ql(_) {
         (w &&
           (w.classList.add("has-photo"),
           (w.innerHTML = `<img src="${Ut.photo}" id="selfie-avatar-img" alt="Selfie" />`)),
-          G && (G.textContent = "Foto de cámara lista"),
-          S && (S.textContent = "Cambiar Foto"));
+          G && (G.textContent = "Lista para la partida"),
+          S && (S.textContent = "Cambiar"));
         if (it && !_.querySelector("#btn-remove-selfie")) {
           const W = document.createElement("button");
           ((W.type = "button"),
             (W.className = "btn-selfie-action btn-selfie-remove"),
             (W.id = "btn-remove-selfie"),
-            (W.textContent = "Eliminar"),
+            (W.textContent = "Quitar"),
             (W.onclick = () => {
               ((Ut.photo = null),
                 localStorage.removeItem("carhide_photo"),
@@ -2636,9 +2662,9 @@ function Ql(_) {
         }
       } else {
         (w &&
-          (w.classList.remove("has-photo"), (w.innerHTML = wt("camera", 24))),
-          G && (G.textContent = "Hazte una foto para la partida (sólo cámara)"),
-          S && (S.textContent = "Hacer Foto"));
+          (w.classList.remove("has-photo"), (w.innerHTML = wt("camera", 22))),
+          G && (G.textContent = "Opcional · solo con la cámara"),
+          S && (S.textContent = "Hacer foto"));
         const W = _.querySelector("#btn-remove-selfie");
         W && W.remove();
       }
@@ -2709,6 +2735,9 @@ function Ql(_) {
         (_.querySelectorAll(".color-swatch").forEach((S) =>
           S.classList.remove("selected"),
         ),
+        _.querySelectorAll(".color-swatch").forEach((S) =>
+          S.setAttribute("aria-checked", String(S === G)),
+        ),
         G.classList.add("selected"),
         (Ut.carColor = G.dataset.color),
         localStorage.setItem("carhide_color", Ut.carColor));
@@ -2747,7 +2776,7 @@ function th(_) {
   const u = document.getElementById("btn-join");
   (u &&
     ((u.disabled = !0),
-    (u.innerHTML = '<div class="spinner"></div> Conectando...')),
+    (u.innerHTML = '<div class="spinner"></div>')),
     ut.emit("join_room", {
       code: _.toUpperCase(),
       playerName: Ut.playerName,
@@ -2766,7 +2795,7 @@ function th(_) {
         Ke(w.message || "Error al unirse"),
         u &&
           ((u.disabled = !1),
-          (u.innerHTML = `${wt("users")} Unirse a Partida`)));
+          (u.innerHTML = "Unirse")));
     };
   (ut.on("room_joined", c),
     ut.on("error", g),
@@ -2776,29 +2805,12 @@ function th(_) {
         u &&
           u.disabled &&
           ((u.disabled = !1),
-          (u.innerHTML = `${wt("users")} Unirse a Partida`),
+          (u.innerHTML = "Unirse"),
           Ke("Tiempo de espera agotado. Inténtalo de nuevo.")));
     }, 8e3));
 }
 function Ke(_) {
-  let u = document.querySelector(".toast");
-  (u && u.remove(),
-    (u = document.createElement("div")),
-    (u.className = "toast"),
-    (u.style.cssText = `
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-    padding: 12px 24px; background: var(--color-bg-card); color: var(--color-text);
-    border: 1px solid var(--color-border); border-radius: var(--radius-pill);
-    font-size: 0.875rem; z-index: 9000; animation: fade-in-up 0.3s ease-out;
-    box-shadow: var(--shadow-card);
-  `),
-    (u.textContent = _),
-    document.body.appendChild(u),
-    setTimeout(() => {
-      ((u.style.opacity = "0"),
-        (u.style.transition = "opacity 0.3s ease"),
-        setTimeout(() => u.remove(), 300));
-    }, 3e3));
+  toast(_);
 }
 var $s =
   typeof globalThis < "u"
@@ -25404,166 +25416,117 @@ function oh(_, u) {
   ((eo = u),
     (_.innerHTML = `
     <nav class="navbar">
-      <button id="btn-back" class="btn-icon btn-ghost" aria-label="Volver" style="border:none;">
-        ${wt("arrowLeft")}
+      <button id="btn-back" class="nav-back" aria-label="Volver al inicio">
+        ${wt("chevronLeft", 22)}<span>Inicio</span>
       </button>
-      <span class="navbar-logo">Configurar Partida</span>
-      <div style="width:48px;"></div>
+      <span class="navbar-title">Nueva partida</span>
+      <span class="nav-spacer"></span>
     </nav>
 
-    <div class="screen-content" style="padding-top: calc(var(--navbar-height) + var(--space-sm)); overflow-y: auto;">
+    <div class="screen-content with-navbar">
 
-      <!-- Zona de juego -->
-      <div class="section-header mt-sm">
-        <span class="section-title">${wt("map", 16)} Zona de Juego</span>
-      </div>
-      <div class="card mb-md" style="padding:0; overflow:hidden;">
-        <div id="settings-map" style="width:100%; height:280px; border-radius:var(--radius);"></div>
-      </div>
-      <p class="text-muted" style="font-size:0.813rem; margin-top: calc(-1 * var(--space-sm)); margin-bottom: var(--space-md);">
-        Dibuja un polígono en el mapa para delimitar la zona de juego. Usa el botón del polígono en el mapa.
-      </p>
-      <button id="btn-clear-zone" class="btn btn-ghost btn-sm mb-md hidden">
-        ${wt("x", 16)} Borrar zona y redibujar
-      </button>
+      <section class="group" aria-labelledby="set-zone-title">
+        <h2 class="group-title" id="set-zone-title">Zona de juego</h2>
+        <div class="map-card">
+          <div id="settings-map"></div>
+        </div>
+        <p class="group-footer">
+          Toca el icono del polígono y marca los vértices sobre el mapa. Cierra la forma tocando el primer punto.
+        </p>
+        <button id="btn-clear-zone" class="btn btn-plain btn-plain-danger hidden">
+          ${wt("x", 16)} Borrar zona y volver a dibujar
+        </button>
+      </section>
 
-      <!-- Tiempos -->
-      <div class="section-header mt-sm">
-        <span class="section-title">${wt("clock", 16)} Tiempos</span>
-      </div>
-      <div class="card flex-col gap-md mb-md">
-        ${wr("hideTime", "Tiempo para esconderse", Ot.hideTime, "min")}
-        <div class="divider"></div>
-        ${ah()}
-        <div class="divider"></div>
-        ${wr("zoneShrinkInterval", "Intervalo encogimiento zona", Ot.zoneShrinkInterval, "min")}
-        <div class="divider"></div>
-        ${wr("zoneTransitionTime", "Tiempo para llegar a nueva zona", Ot.zoneTransitionTime, "min")}
-        <div class="divider"></div>
-        ${wr("outsideZoneLimit", "Tiempo fuera de zona → eliminación", Ot.outsideZoneLimit, "seg")}
-      </div>
+      <section class="group" aria-labelledby="set-time-title">
+        <h2 class="group-title" id="set-time-title">Tiempos</h2>
+        <div class="list">
+          ${wr("hideTime", "Para esconderse", Ot.hideTime, "min")}
+          ${ah()}
+          ${wr("zoneShrinkInterval", "La zona se cierra cada", Ot.zoneShrinkInterval, "min")}
+          ${wr("zoneTransitionTime", "Para llegar a la nueva zona", Ot.zoneTransitionTime, "min")}
+          ${wr("outsideZoneLimit", "Fuera de zona hasta eliminar", Ot.outsideZoneLimit, "s")}
+        </div>
+      </section>
 
-      <!-- Jugadores -->
-      <div class="section-header">
-        <span class="section-title">${wt("users", 16)} Jugadores</span>
-      </div>
-      <div class="card flex-col gap-sm mb-md">
-        ${wr("seekerCount", "Número de seekers", Ot.seekerCount, "")}
-        <div class="divider"></div>
-        <div class="toggle-group">
-          <div class="toggle-info">
-            <span class="toggle-title">Pillado se convierte en seeker</span>
-            <span class="toggle-desc">El jugador pillado pasa a buscar al resto</span>
+      <section class="group" aria-labelledby="set-players-title">
+        <h2 class="group-title" id="set-players-title">Jugadores</h2>
+        <div class="list">
+          ${wr("seekerCount", "Buscadores", Ot.seekerCount, "")}
+          ${toggleRow("toggle-caught", "El pillado pasa a buscar", "Quien es cazado se une a los buscadores", Ot.caughtBecomesSeeker)}
+          ${toggleRow("toggle-eliminated", "La tormenta convierte en buscador", "Si te elimina la zona, pasas a buscar", Ot.eliminatedBecomesSeeker)}
+          ${toggleRow("toggle-sonar", "Sonar de pistas", "Revela a los buscadores el sector aproximado", Ot.sonarEnabled)}
+          <div id="sonar-time-container" class="${Ot.sonarEnabled ? "" : "hidden"}">
+            ${wr("sonarInterval", "Un ping cada", Ot.sonarInterval || 3, "min")}
           </div>
-          <label class="toggle">
-            <input type="checkbox" id="toggle-caught" ${Ot.caughtBecomesSeeker ? "checked" : ""} />
-            <span class="toggle-track"></span>
-            <span class="toggle-thumb"></span>
-          </label>
+          ${toggleRow("toggle-photo", "Fichas policiales", "El copiloto fotografía el coche al pillarlo", Ot.photoEnabled)}
         </div>
-        <div class="divider"></div>
-        <div class="toggle-group">
-          <div class="toggle-info">
-            <span class="toggle-title">Eliminado por zona → seeker</span>
-            <span class="toggle-desc">Si te pilla la tormenta, pasas a buscar</span>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" id="toggle-eliminated" ${Ot.eliminatedBecomesSeeker ? "checked" : ""} />
-            <span class="toggle-track"></span>
-            <span class="toggle-thumb"></span>
-          </label>
-        </div>
-        <div class="divider"></div>
-        <div class="toggle-group">
-          <div class="toggle-info">
-            <span class="toggle-title">Sonar de pistas periódico</span>
-            <span class="toggle-desc">Pistas de satélite con el sector aproximado</span>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" id="toggle-sonar" ${Ot.sonarEnabled ? "checked" : ""} />
-            <span class="toggle-track"></span>
-            <span class="toggle-thumb"></span>
-          </label>
-        </div>
-        <div id="sonar-time-container" class="${Ot.sonarEnabled ? "" : "hidden"}" style="margin-top:var(--space-xs);">
-          ${wr("sonarInterval", "Tiempo entre pings de sonar", Ot.sonarInterval || 3, "min")}
-        </div>
-        <div class="divider"></div>
-        <div class="toggle-group">
-          <div class="toggle-info">
-            <span class="toggle-title">Fotos de "Fichado" de coches</span>
-            <span class="toggle-desc">El copiloto puede hacer foto al pillar para los resultados</span>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" id="toggle-photo" ${Ot.photoEnabled ? "checked" : ""} />
-            <span class="toggle-track"></span>
-            <span class="toggle-thumb"></span>
-          </label>
-        </div>
-      </div>
+      </section>
 
-      <!-- Crear partida -->
-      <button id="btn-create-room" class="btn btn-primary btn-lg mt-sm mb-lg">
-        ${wt("play")}
-        Crear Partida
-      </button>
+      <div class="action-bar">
+        <button id="btn-create-room" class="btn btn-primary btn-lg">
+          ${wt("play", 20)}
+          Crear partida
+        </button>
+      </div>
     </div>
   `),
     uh(_),
     lh(_));
 }
+function toggleRow(id, title, desc, checked) {
+  return `
+    <label class="row toggle-row" for="${id}">
+      <span class="toggle-info">
+        <span class="toggle-title">${title}</span>
+        <span class="toggle-desc">${desc}</span>
+      </span>
+      <span class="toggle">
+        <input type="checkbox" role="switch" id="${id}" ${checked ? "checked" : ""} />
+        <span class="toggle-track"></span>
+        <span class="toggle-thumb"></span>
+      </span>
+    </label>
+  `;
+}
 function wr(_, u, c, g) {
   return `
-    <div class="slider-group">
-      <div class="slider-header">
-        <span class="slider-label">${u}</span>
-        <div class="number-input-group">
-          <input 
-            type="number" 
-            id="setting-${_}" 
-            class="input number-input" 
-            value="${c}" 
-            min="0"
-            step="${g === "seg" ? "1" : "any"}"
-            inputmode="decimal"
-          />
-          <span class="number-unit">${g}</span>
-        </div>
-      </div>
-    </div>
+    <label class="row value-row" for="setting-${_}">
+      <span class="row-label">${u}</span>
+      <span class="value-field">
+        <input
+          type="number"
+          id="setting-${_}"
+          class="input number-input"
+          value="${c}"
+          min="0"
+          step="${g === "s" || g === "" ? "1" : "any"}"
+          inputmode="decimal"
+        />
+        <span class="number-unit">${g}</span>
+      </span>
+    </label>
   `;
 }
 function ah() {
   return `
-    <div class="slider-group">
-      <div class="slider-header">
-        <span class="slider-label">Duración de la partida</span>
-        <div class="number-input-group">
-          <input 
-            type="number" 
-            id="setting-gameDuration" 
-            class="input number-input" 
-            value="${Ot.gameDuration}" 
-            min="0"
-            step="any"
-            inputmode="decimal"
-            ${Ot.infiniteMode ? "disabled" : ""}
-          />
-          <span class="number-unit">min</span>
-        </div>
-      </div>
-      <div class="toggle-group" style="padding-top:var(--space-xs);">
-        <div class="toggle-info">
-          <span class="toggle-title">${wt("infinity", 16)} Modo infinito</span>
-          <span class="toggle-desc">Sin límite de tiempo. Gana el último en pie.</span>
-        </div>
-        <label class="toggle">
-          <input type="checkbox" id="toggle-infinite" ${Ot.infiniteMode ? "checked" : ""} />
-          <span class="toggle-track"></span>
-          <span class="toggle-thumb"></span>
-        </label>
-      </div>
-    </div>
+    <label class="row value-row" for="setting-gameDuration">
+      <span class="row-label">Duración de la partida</span>
+      <span class="value-field">
+        <input
+          type="number"
+          id="setting-gameDuration"
+          class="input number-input"
+          value="${Ot.gameDuration}"
+          min="0"
+          step="any"
+          inputmode="decimal"
+          ${Ot.infiniteMode ? "disabled" : ""}
+        />
+        <span class="number-unit">min</span>
+      </span>
+    </label>
+    ${toggleRow("toggle-infinite", "Modo infinito", "Sin límite de tiempo: gana el último en pie", Ot.infiniteMode)}
   `;
 }
 function uh(_) {
@@ -25580,6 +25543,15 @@ function uh(_) {
         subdomains: "abc",
       })
       .addTo(Yt),
+    (() => {
+      try {
+        Yt.pm.setLang && Yt.pm.setLang("es");
+        Yt.pm.setGlobalOptions({
+          templineStyle: { color: "#FF9F0A", weight: 3 },
+          hintlineStyle: { color: "#FF9F0A", dashArray: [6, 6], weight: 2 },
+        });
+      } catch (e) {}
+    })(),
     Yt.pm.addControls({
       position: "topleft",
       drawPolygon: !0,
@@ -25596,10 +25568,10 @@ function uh(_) {
       rotateMode: !1,
     }),
     Yt.pm.setPathOptions({
-      color: "#00e5ff",
-      fillColor: "#00e5ff",
-      fillOpacity: 0.1,
-      weight: 2,
+      color: "#FF9F0A",
+      fillColor: "#FF9F0A",
+      fillOpacity: 0.12,
+      weight: 3,
     }),
     Yt.on("pm:create", (g) => {
       if (Ie) {
@@ -25692,7 +25664,9 @@ function lh(_) {
       const g = _.querySelector("#setting-gameDuration");
       g &&
         ((g.disabled = c.target.checked),
-        c.target.checked ? (g.value = "∞") : (g.value = Ot.gameDuration || 30));
+        c.target.checked
+          ? ((g.value = ""), (g.placeholder = "∞"))
+          : (g.value = Ot.gameDuration || 30));
     }),
     _.querySelector("#toggle-caught").addEventListener("change", (c) => {
       Ot.caughtBecomesSeeker = c.target.checked;
@@ -25720,7 +25694,7 @@ function lh(_) {
       const c = Ie.toGeoJSON(),
         g = _.querySelector("#btn-create-room");
       ((g.disabled = !0),
-        (g.innerHTML = '<div class="spinner"></div> Creando...'));
+        (g.innerHTML = '<div class="spinner"></div> Creando…'));
       const w = {
         hideTime: Math.round(Ot.hideTime * 60),
         gameDuration: Ot.infiniteMode ? 0 : Math.round(Ot.gameDuration * 60),
@@ -25755,7 +25729,7 @@ function lh(_) {
             ut.off("error"),
             Ke(it.message || "Error al crear la partida"),
             (g.disabled = !1),
-            (g.innerHTML = `${wt("play")} Crear Partida`));
+            (g.innerHTML = `${wt("play", 20)} Crear partida`));
         };
       (ut.on("room_created", G), ut.on("error", S));
     }));
@@ -25766,102 +25740,96 @@ function hh(_, u) {
   ((io = { ...u }),
     (_.innerHTML = `
     <nav class="navbar">
-      <button id="btn-leave" class="btn-icon btn-ghost" aria-label="Salir" style="border:none;">
-        ${wt("arrowLeft")}
+      <button id="btn-leave" class="nav-back" aria-label="Salir de la sala">
+        ${wt("chevronLeft", 22)}<span>Salir</span>
       </button>
-      <span class="navbar-logo">
-        ${wt("car", 20)}
-        <span>Car <span class="text-accent">Hide</span></span>
-      </span>
-      <div class="navbar-status">
-        <span class="status-dot"></span>
-        <span>Online</span>
-      </div>
+      <span class="navbar-title">Sala de espera</span>
+      <span class="navbar-status"><span class="status-dot"></span>En línea</span>
     </nav>
 
-    <div class="screen-content" style="padding-top: calc(var(--navbar-height) + var(--space-md));">
+    <div class="screen-content with-navbar">
 
-      <!-- Código de partida -->
-      <div class="game-code mb-md" id="game-code-display">
-        <span class="game-code-label">Código de Partida</span>
-        <span class="game-code-value" id="code-value" title="Clic para copiar">${u.roomCode || "------"}</span>
-        <span class="game-code-hint">Toca para copiar y compartir con tus amigos</span>
-      </div>
+      <button type="button" class="game-code" id="game-code-display" aria-label="Copiar código de la sala">
+        <span class="game-code-label">Código de la sala</span>
+        <span class="game-code-value" id="code-value">${u.roomCode || "-----"}</span>
+        <span class="game-code-hint">${wt("copy", 14)} Toca para copiar e invitar</span>
+      </button>
 
-      <!-- Ajustes resumen -->
-      <details class="card mb-md" style="cursor:pointer;">
-        <summary class="flex items-center gap-sm" style="list-style:none; padding:var(--space-xs) 0;">
-          <span style="display:flex;">${wt("settings", 18)}</span>
-          <span class="section-title" style="margin:0;">Ajustes de la partida</span>
+      <details class="group disclosure">
+        <summary class="disclosure-summary">
+          <span class="disclosure-icon">${wt("settings", 18)}</span>
+          <span class="disclosure-title">Reglas de la partida</span>
+          <span class="disclosure-chevron">${wt("chevronDown", 18)}</span>
         </summary>
-        <div class="flex-col gap-xs mt-sm" id="settings-summary" style="font-size:0.875rem; color:var(--color-text-muted);">
+        <div class="list summary-list" id="settings-summary">
           <!-- Se rellena dinámicamente -->
         </div>
       </details>
 
-      <!-- Jugadores -->
-      <div class="section-header">
-        <span class="section-title">${wt("users", 16)} Jugadores</span>
-        <span class="badge badge-accent" id="player-count">0</span>
-      </div>
-      <div class="card mb-md" style="padding:var(--space-sm);">
-        <div id="player-list" class="flex-col gap-xs">
+      <section class="group" aria-labelledby="lobby-players-title">
+        <div class="group-title-row">
+          <h2 class="group-title" id="lobby-players-title">Jugadores</h2>
+          <span class="count-chip" id="player-count">0</span>
+        </div>
+        <div id="player-list" class="list">
           <!-- Se rellena dinámicamente -->
         </div>
-      </div>
+      </section>
 
-      <!-- Estado y Activación de GPS -->
-      <div class="card mb-md" style="padding:10px 14px; background:var(--color-bg-elevated); border:1px solid var(--color-border); border-radius:var(--radius); display:flex; justify-content:space-between; align-items:center;">
-        <div style="display:flex; align-items:center; gap:10px;">
-          <div id="gps-status-icon" style="width:10px; height:10px; border-radius:50%; background:var(--color-warning); box-shadow:0 0 6px var(--color-warning); flex-shrink:0;"></div>
-          <div>
-            <div id="gps-status-title" style="font-size:0.875rem; font-weight:600; color:var(--color-text);">Ubicación GPS</div>
-            <div id="gps-status-desc" style="font-size:0.75rem; color:var(--color-text-muted);">Comprobando señal...</div>
+      <section class="group">
+        <div class="list">
+          <div class="row gps-row">
+            <span id="gps-status-icon" class="gps-dot" data-state="pending"></span>
+            <span class="row-text">
+              <span id="gps-status-title" class="row-title">Ubicación GPS</span>
+              <span id="gps-status-desc" class="row-subtitle">Comprobando señal…</span>
+            </span>
+            <button id="btn-request-gps" class="btn btn-tinted btn-sm">
+              ${wt("locate", 14)} Activar
+            </button>
           </div>
         </div>
-        <button id="btn-request-gps" class="btn btn-ghost btn-sm" style="font-size:0.813rem; padding:6px 12px; border:1px solid var(--color-border); white-space:nowrap;">
-          ${wt("mapPin", 14)} Activar GPS
-        </button>
-      </div>
+      </section>
 
-      <!-- Chat pre-partida -->
-      <div class="chat-container mb-md" id="lobby-chat">
-        <div class="chat-header" id="chat-toggle">
-          <span class="chat-header-title">${wt("messageCircle", 16)} Chat</span>
-          <span class="text-muted" style="font-size:0.75rem;">â–¼</span>
-        </div>
-        <div class="chat-messages" id="chat-messages"></div>
-        <div class="chat-input-row">
-          <input 
-            type="text" 
-            class="chat-input" 
-            id="chat-input"
-            placeholder="Escribe un mensaje..."
-            maxlength="200"
-            autocomplete="off"
-          />
-          <button class="chat-send" id="chat-send-btn" aria-label="Enviar">
-            ${wt("send", 18)}
+      <section class="group">
+        <div class="chat-container" id="lobby-chat">
+          <button type="button" class="chat-header" id="chat-toggle" aria-expanded="true">
+            <span class="chat-header-title">${wt("messageCircle", 16)} Chat</span>
+            <span class="chat-toggle-icon">${wt("chevronDown", 16)}</span>
           </button>
+          <div class="chat-messages" id="chat-messages"></div>
+          <div class="chat-input-row">
+            <input
+              type="text"
+              class="chat-input"
+              id="chat-input"
+              placeholder="Mensaje"
+              maxlength="200"
+              autocomplete="off"
+              enterkeyhint="send"
+            />
+            <button class="chat-send" id="chat-send-btn" aria-label="Enviar">
+              ${wt("arrowUp", 18)}
+            </button>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <!-- Botón iniciar -->
       ${
         u.isHost
           ? `
-        <button id="btn-start" class="btn btn-primary btn-lg glow-ring mb-lg" disabled>
-          ${wt("play")}
-          Iniciar Partida
-        </button>
-        <p class="text-center text-muted" style="font-size:0.813rem; margin-top:calc(-1 * var(--space-sm));">
-          Se necesitan al menos 2 jugadores para iniciar
-        </p>
+        <div class="action-bar">
+          <button id="btn-start" class="btn btn-primary btn-lg" disabled>
+            ${wt("play", 20)}
+            Empezar partida
+          </button>
+          <p class="action-hint">Se necesitan al menos 2 jugadores</p>
+        </div>
       `
           : `
-        <div class="card text-center mb-lg" style="padding:var(--space-lg);">
-          <div class="spinner" style="margin:0 auto var(--space-sm);"></div>
-          <p class="text-muted">Esperando a que el anfitrión inicie la partida...</p>
+        <div class="waiting-card">
+          <div class="spinner"></div>
+          <p>Esperando a que el anfitrión empiece la partida…</p>
         </div>
       `
       }
@@ -25874,24 +25842,23 @@ function hh(_, u) {
 function cu(_, u) {
   const c = _.querySelector("#player-list"),
     g = _.querySelector("#player-count"),
-    w = _.querySelector("#btn-start");
+    w = _.querySelector("#btn-start"),
+    me = ut && ut.getId ? ut.getId() : null;
   c &&
     (!u || u.length === 0
       ? (c.innerHTML = `
-      <div class="empty-state" style="padding:var(--space-md);">
-        <span class="text-muted">Esperando jugadores...</span>
-      </div>
+      <div class="empty-state">Esperando jugadores…</div>
     `)
       : (c.innerHTML = u
           .map(
-            (G, S) => `
-      <div class="player-item" style="animation: fade-in-up 0.3s ease-out ${S * 0.05}s both;">
-        ${G.photo ? `<div class="player-avatar" style="padding:0; overflow:hidden; border:2px solid ${G.carColor || "#007aff"}; box-shadow:0 0 10px ${G.carColor || "#007aff"}55;"><img src="${G.photo}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" alt="${ro(G.name)}" /></div>` : `<div class="player-avatar" style="background:${G.carColor || "#007aff"};">${(G.name || "J")[0].toUpperCase()}</div>`}
+            (G) => `
+      <div class="row player-item">
+        ${G.photo ? `<span class="player-avatar has-photo" style="--car:${G.carColor || "#0A84FF"};"><img src="${G.photo}" alt="${ro(G.name)}" /></span>` : `<span class="player-avatar" style="--car:${G.carColor || "#0A84FF"};">${ro((G.name || "J")[0].toUpperCase())}</span>`}
         <div class="player-info">
-          <div class="player-name">${ro(G.name)}</div>
+          <div class="player-name">${ro(G.name)}${G.id === me ? ' <span class="me-tag">Tú</span>' : ""}</div>
           <div class="player-car">${ro(G.carModel || "Sin modelo")}</div>
         </div>
-        ${G.isHost ? '<span class="player-badge">Host</span>' : ""}
+        ${G.isHost ? '<span class="player-badge">Anfitrión</span>' : ""}
       </div>
     `,
           )
@@ -25904,44 +25871,54 @@ function ch(_, u) {
   if (!c || !u) return;
   const g = (w) =>
     w === 0
-      ? "∞ Infinito"
+      ? "Sin límite"
       : w >= 60
         ? w % 60 === 0
           ? `${w / 60} min`
           : `${Math.round((w / 60) * 10) / 10} min`
-        : `${w} seg`;
-  c.innerHTML = `
-    <div class="flex flex-between"><span>Tiempo para esconderse:</span><strong>${g(u.hideTime)}</strong></div>
-    <div class="flex flex-between"><span>Duración partida:</span><strong>${u.infiniteMode ? "∞ Infinito" : g(u.gameDuration)}</strong></div>
-    <div class="flex flex-between"><span>Encogimiento zona:</span><strong>Cada ${g(u.zoneShrinkInterval)}</strong></div>
-    <div class="flex flex-between"><span>Tiempo para llegar a zona:</span><strong>${g(u.zoneTransitionTime)}</strong></div>
-    <div class="flex flex-between"><span>Límite fuera de zona:</span><strong>${g(u.outsideZoneLimit)}</strong></div>
-    <div class="flex flex-between"><span>Sonar de pistas:</span><strong>${u.sonarEnabled ? "Cada " + g(u.sonarInterval || 180) : "Desactivado"}</strong></div>
-    <div class="flex flex-between"><span>Seekers:</span><strong>${u.seekerCount}</strong></div>
-    <div class="flex flex-between"><span>Pillado → seeker:</span><strong>${u.caughtBecomesSeeker ? "Sí" : "No"}</strong></div>
-    <div class="flex flex-between"><span>Eliminado → seeker:</span><strong>${u.eliminatedBecomesSeeker ? "Sí" : "No"}</strong></div>
-  `;
+        : `${w} s`;
+  const row = (k, v) =>
+    `<div class="row summary-row"><span>${k}</span><strong>${v}</strong></div>`;
+  c.innerHTML = [
+    row("Para esconderse", g(u.hideTime)),
+    row("Duración", u.infiniteMode ? "Sin límite" : g(u.gameDuration)),
+    row("La zona se cierra", "Cada " + g(u.zoneShrinkInterval)),
+    row("Para llegar a la zona", g(u.zoneTransitionTime)),
+    row("Fuera de zona", g(u.outsideZoneLimit)),
+    row("Sonar", u.sonarEnabled ? "Cada " + g(u.sonarInterval || 180) : "No"),
+    row("Buscadores", u.seekerCount),
+    row("El pillado busca", u.caughtBecomesSeeker ? "Sí" : "No"),
+    row("La tormenta convierte", u.eliminatedBecomesSeeker ? "Sí" : "No"),
+  ].join("");
 }
 function dh(_) {
   var pt;
   _.querySelector("#btn-leave").addEventListener("click", () => {
     (ut.emit("leave_room"), $a(), Xt.navigate("home"));
   });
-  const u = _.querySelector("#code-value");
-  (u &&
+  const u = _.querySelector("#game-code-display"),
+    uv = _.querySelector("#code-value");
+  u &&
+    uv &&
     u.addEventListener("click", async () => {
-      const vt = u.textContent;
+      const vt = uv.textContent.trim();
       try {
-        (await navigator.clipboard.writeText(vt), Ke("Código copiado: " + vt));
+        (await navigator.clipboard.writeText(vt),
+          haptic("tap"),
+          u.classList.remove("is-copied"),
+          void u.offsetWidth,
+          u.classList.add("is-copied"),
+          Ke("Código " + vt + " copiado"));
       } catch {
-        Ke("Código: " + vt);
+        Ke("Código de la sala: " + vt);
       }
-    }),
-    _.querySelector("#lobby-chat"));
-  const c = _.querySelector(".chat-messages");
+    });
+  const c = _.querySelector(".chat-messages"),
+    chatBox = _.querySelector("#lobby-chat");
   (pt = _.querySelector("#chat-toggle")) == null ||
     pt.addEventListener("click", () => {
-      c.style.display = c.style.display === "none" ? "flex" : "none";
+      const collapsed = chatBox.classList.toggle("is-collapsed");
+      pt.setAttribute("aria-expanded", String(!collapsed));
     });
   const g = _.querySelector("#chat-input"),
     w = _.querySelector("#chat-send-btn"),
@@ -25980,7 +25957,7 @@ function dh(_) {
   ot &&
     ot.addEventListener("click", () => {
       ((ot.disabled = !0),
-        (ot.innerHTML = '<div class="spinner"></div> Iniciando...'),
+        (ot.innerHTML = '<div class="spinner"></div> Empezando…'),
         ut.emit("start_game", { roomCode: io.roomCode }));
     });
   const qG = _.querySelector("#btn-request-gps"),
@@ -25989,53 +25966,46 @@ function dh(_) {
     qD = _.querySelector("#gps-status-desc");
   function tg(Tr = !1) {
     if (!("geolocation" in navigator)) {
-      (qT && (qT.textContent = "GPS no soportado"),
-        qD && (qD.textContent = "Navegador sin geolocalización"),
-        qI && (qI.style.background = "var(--color-danger)"));
+      (qT && (qT.textContent = "GPS no disponible"),
+        qD && (qD.textContent = "Este navegador no tiene geolocalización"),
+        qI && (qI.dataset.state = "error"));
       return;
     }
     Tr &&
       qG &&
       ((qG.disabled = !0),
-      (qG.innerHTML =
-        '<div class="spinner" style="width:12px;height:12px;display:inline-block;margin-right:4px;"></div> Comprobando...'));
+      (qG.innerHTML = '<div class="spinner spinner-sm"></div>'));
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        (qI &&
-          ((qI.style.background = "var(--color-success)"),
-          (qI.style.boxShadow = "0 0 8px var(--color-success)")),
-          qT && (qT.textContent = "GPS Conectado ✓"),
+        (qI && (qI.dataset.state = "ok"),
+          qT && (qT.textContent = "GPS conectado"),
           qD &&
-            (qD.textContent = `Ubicación lista (±${Math.round(pos.coords.accuracy)}m)`),
+            (qD.textContent = `Precisión de ±${Math.round(pos.coords.accuracy)} m`),
           qG &&
             ((qG.disabled = !1),
-            (qG.innerHTML = "✓ Listo"),
-            qG.classList.remove("btn-ghost"),
-            qG.classList.add("btn-primary")),
-          Tr && Ke("✅ Ubicación GPS activada correctamente"));
+            (qG.innerHTML = `${wt("check", 14)} Listo`),
+            qG.classList.add("is-ready")),
+          Tr && Ke("Ubicación activada"));
       },
       (err) => {
-        (qI &&
-          ((qI.style.background = "var(--color-danger)"),
-          (qI.style.boxShadow = "0 0 8px var(--color-danger)")),
+        (qI && (qI.dataset.state = "error"),
           qT && (qT.textContent = "GPS no activado"),
           qD &&
             (qD.textContent =
               err.code === 1
-                ? "Toca 🔒 en el navegador"
-                : "Señal no detectada"),
+                ? "Permiso bloqueado en el navegador"
+                : "Sin señal todavía"),
           qG &&
             ((qG.disabled = !1),
-            (qG.innerHTML = `${wt("mapPin", 14)} Reintentar`),
-            qG.classList.remove("btn-primary"),
-            qG.classList.add("btn-ghost")),
+            (qG.innerHTML = `${wt("locate", 14)} Reintentar`),
+            qG.classList.remove("is-ready")),
           Tr &&
             (err.code === 1
               ? Ke(
-                  "⚠️ Permiso bloqueado: toca el candado 🔒 en la barra web para permitirlo",
+                  "Permiso bloqueado: toca el candado de la barra de direcciones para permitir la ubicación",
                 )
               : Ke(
-                  "⚠️ No se pudo obtener señal GPS. Activa la ubicación en tu dispositivo",
+                  "No hay señal GPS. Activa la ubicación en tu dispositivo",
                 )));
       },
       { enableHighAccuracy: !0, timeout: 8e3 },
@@ -26052,10 +26022,12 @@ function ph(_, u) {
     ? (w += " chat-msg-system")
     : u.type === "catch"
       ? (w += " chat-msg-catch")
-      : u.type === "zone" && (w += " chat-msg-zone"),
+      : u.type === "zone"
+        ? (w += " chat-msg-zone")
+        : u.senderId && u.senderId === ut.getId() && (w += " is-mine"),
     (g.className = w),
     u.type === "player"
-      ? (g.innerHTML = `<span class="msg-author" style="color:${u.playerColor || "var(--color-accent)"}">${ro(u.playerName)}:</span> ${ro(u.message)}`)
+      ? (g.innerHTML = `<span class="msg-author" style="--author:${u.playerColor || "var(--accent)"}">${ro(u.playerName)}</span><span class="msg-text">${ro(u.message)}</span>`)
       : (g.textContent = u.message),
     c.appendChild(g),
     (c.scrollTop = c.scrollHeight));
@@ -26152,14 +26124,13 @@ class _h {
   }
   _createMarkerHtml(u, c, g) {
     return `
-      <div class="player-marker-container ${g ? "marker-glow" : ""}">
+      <div class="player-marker-container ${g ? "marker-glow" : ""}" style="--car:${u};">
         <div class="car-icon-wrapper">
-          <svg viewBox="0 0 24 24" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
-            <!-- Chevron / Arrow shape pointing up -->
-            <polygon points="12,2 22,22 12,17 2,22" fill="${u}" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+          <svg viewBox="0 0 24 24" width="30" height="30" xmlns="http://www.w3.org/2000/svg">
+            <polygon points="12,2 21,21 12,16.5 3,21" fill="${u}" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
           </svg>
         </div>
-        <div class="player-name-label" style="border-left: 3px solid ${u}; color: #FFFFFF;">${c}</div>
+        <div class="player-name-label"><span class="marker-dot"></span>${ro(c)}</div>
       </div>
     `;
   }
@@ -26581,219 +26552,196 @@ async function vh(_, u) {
     (ct.settings = u.settings || (io && io.settings) || null),
     (ct.isChatOpen = !1),
     (ct.isCatchPanelOpen = !1),
+    (ct.finishing = !1),
     (ct.unreadMessages = 0),
     du.request().catch(() => {}),
     oo.start().catch(() => {}),
     _.classList.add("screen-full"),
     (_.innerHTML = `
-    <!-- Pantalla de Revelación de Rol (3 Segundos - Toca para saltar) -->
+    <!-- Revelación de rol (3 s · toca para saltar) -->
     <div id="role-reveal-overlay" class="role-reveal-overlay ${ct.role === "seeker" ? "role-reveal-seeker" : "role-reveal-hider"}" onclick="this.classList.add('role-reveal-exit');setTimeout(()=>this.remove(),350);">
       <div class="role-reveal-card">
-        <div class="role-reveal-badge">TU ROL EN ESTA PARTIDA</div>
+        <div class="role-reveal-badge">Tu rol en esta partida</div>
         <div class="role-reveal-icon-box">
           ${
             ct.role === "seeker"
-              ? `
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#FF453A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-          `
-              : `
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#007AFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-              <path d="M9 12l2 2 4-4"></path>
-            </svg>
-          `
+              ? `<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7.5"></circle><line x1="21" y1="21" x2="16.4" y2="16.4"></line></svg>`
+              : `<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg>`
           }
         </div>
-        <h1 class="role-title">${ct.role === "seeker" ? "BUSCADOR" : "ESCÓNDETE"}</h1>
+        <h1 class="role-title">${ct.role === "seeker" ? "Buscador" : "Escondido"}</h1>
         <p class="role-instruction">
           ${
             ct.role === "seeker"
-              ? "BUSCADOR, encuentra al resto de jugadores antes de que se acabe el tiempo"
-              : "ESCÓNDETE, el buscador te intentará encontrar"
+              ? "Encuentra a los demás coches antes de que se acabe el tiempo."
+              : "Escóndete dentro de la zona. El buscador saldrá a por ti."
           }
         </p>
         <div class="role-reveal-timer-wrap">
           <div class="role-reveal-bar-bg">
             <div class="role-reveal-bar-fill"></div>
           </div>
-          <span class="role-reveal-countdown" id="role-reveal-sec">Comenzando en 3s...</span>
+          <span class="role-reveal-countdown" id="role-reveal-sec">Empieza en 3 s</span>
         </div>
       </div>
     </div>
 
-    <!-- Modal de Seguridad y Copiloto -->
-    <div id="safety-modal" class="safety-modal-overlay" onclick="if(event.target===this){this.classList.add('closing');setTimeout(()=>{try{this.remove()}catch(e){}},200);}">
-      <div class="safety-modal-card">
+    <!-- Aviso de seguridad: copiloto -->
+    <div id="safety-modal" class="safety-modal-overlay" onclick="if(event.target===this){this.classList.add('closing');setTimeout(()=>{try{this.remove()}catch(e){}},220);}">
+      <div class="safety-modal-card" role="alertdialog" aria-labelledby="safety-title" aria-describedby="safety-desc">
         <div class="safety-icon-badge">
-          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FF9500" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
             <path d="M12 8v4"/>
             <path d="M12 16h.01"/>
           </svg>
         </div>
-        <h2 class="safety-title">Seguridad al Volante</h2>
-        <div class="safety-callout">
-          <strong>¡Pasa este móvil a tu copiloto!</strong>
-        </div>
-        <p class="safety-desc">
-          Por tu seguridad y la de todos, <strong>nunca mires ni manipules la pantalla mientras estás conduciendo</strong>.
+        <h2 class="safety-title" id="safety-title">Pasa el móvil a tu copiloto</h2>
+        <p class="safety-desc" id="safety-desc">
+          Quien conduce <strong>nunca mira ni toca la pantalla</strong>. Car Hide se juega en equipo.
         </p>
-        <div class="safety-checklist">
-          <div class="safety-check-row">
-            <span class="safety-check-icon">• </span>
+        <ul class="safety-checklist">
+          <li class="safety-check-row">
+            <span class="safety-check-icon">${wt("map", 18)}</span>
             <span>El copiloto guía la ruta y vigila la tormenta</span>
-          </div>
-          <div class="safety-check-row">
-            <span class="safety-check-icon">• </span>
+          </li>
+          <li class="safety-check-row">
+            <span class="safety-check-icon">${wt("target", 18)}</span>
             <span>El copiloto busca y atrapa a los rivales</span>
-          </div>
-        </div>
-        <button id="btn-safety-confirm" class="btn btn-primary btn-lg" style="width:100%; margin-top:var(--space-md);" onclick="const m=document.getElementById('safety-modal');if(m){m.classList.add('closing');setTimeout(()=>{try{m.remove()}catch(e){}},200);}">
-          Soy el copiloto · Entendido
+          </li>
+        </ul>
+        <button id="btn-safety-confirm" class="btn btn-primary btn-lg" onclick="const m=document.getElementById('safety-modal');if(m){m.classList.add('closing');setTimeout(()=>{try{m.remove()}catch(e){}},220);}">
+          Soy el copiloto
         </button>
       </div>
     </div>
 
-    <!-- Modal de Foto de Fichado -->
+    <!-- Ficha policial de captura -->
     <div id="photo-modal" class="photo-modal-overlay hidden">
-      <div class="photo-modal-card">
-        <div class="photo-badge-tag">FICHA POLICIAL DE CAPTURA</div>
-        <h3 id="photo-modal-target-name" style="margin-top:8px; font-size:1.3rem;">¡Has cazado a un rival!</h3>
-        <p class="text-muted" style="font-size:0.85rem; margin-bottom:14px;">Haz una foto rápida al coche para que aparezca fichado en los resultados.</p>
-        
-        <div id="photo-preview-box" class="photo-preview-box">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-          <span style="font-size:0.8rem; margin-top:6px;">Toca para abrir la cámara</span>
-          <input type="file" id="camera-file-input" accept="image/*" capture="environment" class="camera-hidden-input" />
-        </div>
+      <div class="photo-modal-card" role="dialog" aria-labelledby="photo-modal-target-name">
+        <div class="photo-badge-tag">Ficha policial</div>
+        <h3 id="photo-modal-target-name" class="photo-modal-title">¡Has cazado a un rival!</h3>
+        <p class="photo-modal-desc">Haz una foto rápida al coche para que aparezca fichado en los resultados.</p>
 
-        <div class="photo-modal-actions" style="margin-top:16px; display:flex; gap:10px;">
-          <button id="btn-skip-photo" class="btn btn-ghost btn-sm" style="flex:1;">Omitir</button>
-          <button id="btn-save-photo" class="btn btn-primary btn-sm hidden" style="flex:1;">Guardar Ficha</button>
+        <div id="photo-preview-box" class="photo-preview-box">
+          ${wt("camera", 32)}
+          <span>Toca para abrir la cámara</span>
+        </div>
+        <input type="file" id="camera-file-input" accept="image/*" capture="environment" class="camera-hidden-input" />
+
+        <div class="photo-modal-actions">
+          <button id="btn-skip-photo" class="btn btn-tinted">Omitir</button>
+          <button id="btn-save-photo" class="btn btn-primary hidden">Guardar ficha</button>
         </div>
       </div>
     </div>
 
-    <!-- Mapa fullscreen -->
+    <!-- Mapa a pantalla completa -->
     <div id="game-map" class="map-container"></div>
 
-    <!-- Navbar -->
-    <nav class="navbar" style="background: var(--color-bg-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);">
-      <span class="navbar-logo" style="font-size:1rem;">
-        ${wt("car", 18)}
-        <span>Car <span class="text-accent">Hide</span></span>
-      </span>
-      <div class="navbar-status">
-        <span class="status-dot"></span>
-        <span style="font-size:0.75rem;">Online</span>
-      </div>
-    </nav>
-
-    <!-- Game HUD -->
+    <!-- HUD -->
     <div class="game-hud">
-      <!-- Top bar -->
       <div class="hud-top">
-        <div class="hud-phase">
-          <span class="hud-phase-label">Fase</span>
-          <span class="hud-phase-name" id="hud-phase">${pu(ct.phase)}</span>
+        <div class="hud-island">
+          <div class="hud-phase">
+            <span class="hud-phase-dot" aria-hidden="true"></span>
+            <span class="hud-phase-label sr-only">Fase</span>
+            <span class="hud-phase-name" id="hud-phase">${pu(ct.phase)}</span>
+          </div>
+          <div class="hud-timers-group">
+            <div class="hud-timer hud-timer-game" id="hud-game-timer-container">
+              <span class="hud-timer-label">Partida</span>
+              <span class="hud-timer-value" id="hud-game-timer">--:--</span>
+            </div>
+            <div class="hud-timer hud-timer-zone" id="hud-zone-timer-container">
+              <span class="hud-timer-label" id="hud-zone-timer-label">Zona</span>
+              <span class="hud-timer-value" id="hud-zone-timer">--:--</span>
+            </div>
+          </div>
         </div>
-        <div class="hud-timers-group">
-          <div class="hud-timer hud-timer-game" id="hud-game-timer-container">
-            <span class="hud-timer-label">Partida</span>
-            <span class="hud-timer-value" id="hud-game-timer">--:--</span>
-          </div>
-          <div class="hud-timer hud-timer-zone" id="hud-zone-timer-container">
-            <span class="hud-timer-label" id="hud-zone-timer-label">Zona</span>
-            <span class="hud-timer-value" id="hud-zone-timer">--:--</span>
-          </div>
+
+        <div id="zone-warning" class="hud-zone-warning hidden" role="status">
+          ${wt("alertTriangle", 16)}
+          <span>La zona se está cerrando</span>
+        </div>
+
+        <div id="outside-zone-bar" class="outside-zone-bar hidden" role="alert">
+          ${wt("alertTriangle", 16)}
+          <span>Estás fuera de la zona. Vuelve antes de quedar eliminado.</span>
         </div>
       </div>
 
-      <!-- Zone warning -->
-      <div id="zone-warning" class="hud-zone-warning hidden">
-        <span>${wt("alertTriangle", 16)}</span>
-        <span>¡LA ZONA SE ESTÁ REDUCIENDO!</span>
-      </div>
-
-      <!-- Spacer -->
       <div class="hud-spacer"></div>
 
-      <!-- Bottom bar -->
       <div class="hud-bottom">
-        <!-- Alive count -->
-        <div class="hud-alive">
+        <div class="hud-alive" aria-label="Escondidos en juego">
           <span class="hud-alive-count" id="hud-alive">-</span>
-          <span class="hud-alive-label">vivos</span>
+          <span class="hud-alive-label">escondidos</span>
         </div>
 
-        <!-- Actions -->
         <div class="hud-actions">
-          <!-- Center on me -->
-          <button id="btn-center" class="hud-btn" title="Centrar en mi ubicación">
-            ${wt("crosshair")}
+          <button id="btn-center" class="hud-btn" aria-label="Centrar en mi ubicación">
+            ${wt("locate", 20)}
           </button>
 
-          <!-- Chat toggle -->
-          <button id="btn-chat" class="hud-btn chat-fab" title="Chat">
-            ${wt("messageCircle")}
+          <button id="btn-chat" class="hud-btn chat-fab" aria-label="Chat">
+            ${wt("messageCircle", 22)}
             <span id="chat-badge" class="unread-badge hidden">0</span>
           </button>
 
-          <!-- Catch button (only seekers in seeking phase) -->
-          <button id="btn-catch" class="hud-btn hud-btn-catch hidden" title="¡Lo encontré!">
-            ${wt("target")} ¡LO ENCONTRÉ!
+          <button id="btn-catch" class="hud-btn hud-btn-catch hidden">
+            ${wt("target", 22)}
+            <span>¡Lo encontré!</span>
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Floating Chat Panel -->
-    <div id="chat-floating" class="chat-floating">
+    <!-- Hoja de chat (no modal) -->
+    <div id="chat-floating" class="chat-floating" role="dialog" aria-label="Chat de la partida">
+      <div class="sheet-grabber" aria-hidden="true"></div>
       <div class="chat-container">
         <div class="chat-header">
-          <span class="chat-header-title">${wt("messageCircle", 14)} Chat de Partida</span>
-          <button id="btn-close-chat" style="background:none; border:none; color:var(--color-text-muted); cursor:pointer; padding:6px;">${wt("x", 18)}</button>
+          <span class="chat-header-title">Chat de la partida</span>
+          <button id="btn-close-chat" class="sheet-close" aria-label="Cerrar chat">${wt("x", 16)}</button>
         </div>
         <div class="chat-messages" id="chat-messages"></div>
         <div class="chat-input-row">
-          <input 
-            type="text" 
-            class="chat-input" 
-            id="chat-input" 
-            placeholder="Escribe un mensaje..." 
-            maxlength="200" 
-            autocomplete="off" 
+          <input
+            type="text"
+            class="chat-input"
+            id="chat-input"
+            placeholder="Mensaje"
+            maxlength="200"
+            autocomplete="off"
+            enterkeyhint="send"
           />
           <button class="chat-send" id="chat-send-btn" aria-label="Enviar">
-            ${wt("send", 18)}
+            ${wt("arrowUp", 18)}
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Catch Panel (Seekers) -->
-    <div id="catch-panel" class="catch-panel">
+    <!-- Hoja de captura (buscadores) -->
+    <div id="catch-panel" class="catch-panel" role="dialog" aria-labelledby="catch-panel-title">
+      <div class="sheet-grabber" aria-hidden="true"></div>
       <div class="catch-panel-header">
-        <span class="catch-panel-title">¿A quién has pillado?</span>
-        <button id="btn-close-catch" class="catch-panel-close">${wt("x", 18)}</button>
+        <div class="catch-panel-heading">
+          <span class="catch-panel-title" id="catch-panel-title">¿A quién has pillado?</span>
+          <span class="catch-panel-subtitle">Tienes que estar cerca de su coche</span>
+        </div>
+        <button id="btn-close-catch" class="sheet-close catch-panel-close" aria-label="Cerrar">${wt("x", 16)}</button>
       </div>
       <div class="catch-panel-list" id="catch-list"></div>
     </div>
 
-    <!-- Catch Alert Overlay -->
-    <div id="catch-alert" class="catch-alert-overlay">
-      <div class="catch-alert-icon">ðŸ’€</div>
-      <div class="catch-alert-title" id="catch-alert-title">¡TE HAN PILLADO!</div>
+    <!-- Alerta de captura -->
+    <div id="catch-alert" class="catch-alert-overlay" role="alert">
+      <div class="catch-alert-icon" id="catch-alert-icon">${wt("target", 44)}</div>
+      <div class="catch-alert-title" id="catch-alert-title">¡Te han pillado!</div>
       <div class="catch-alert-subtitle" id="catch-alert-subtitle"></div>
       <div class="catch-alert-seeker-tip" id="catch-alert-tip"></div>
-    </div>
-
-    <!-- Outside zone warning bar -->
-    <div id="outside-zone-bar" class="outside-zone-bar hidden">
-      âš ï¸ ¡ESTÁS FUERA DE LA ZONA! Vuelve antes de ser eliminado
     </div>
   `));
   Lh();
@@ -26884,11 +26832,11 @@ async function vh(_, u) {
 function pu(_) {
   return (
     {
-      HIDING: "ESCONDERSE",
-      SEEKING: "BUSCANDO",
-      ZONE_WARNING: "ZONA REDUCIÉNDOSE",
-      ENDED: "FINALIZADO",
-      COUNTDOWN: "CUENTA ATRÁS",
+      HIDING: "Escondite",
+      SEEKING: "Búsqueda",
+      ZONE_WARNING: "Zona cerrándose",
+      ENDED: "Finalizada",
+      COUNTDOWN: "Cuenta atrás",
     }[_] || _
   );
 }
@@ -26914,9 +26862,9 @@ function Lh() {
   const rrInterval = setInterval(() => {
     rrCount--;
     if (rrCount > 0) {
-      if (rrEl) rrEl.textContent = `Comenzando en ${rrCount}s...`;
+      if (rrEl) rrEl.textContent = `Empieza en ${rrCount} s`;
     } else {
-      if (rrEl) rrEl.textContent = "¡A JUGAR!";
+      if (rrEl) rrEl.textContent = "¡A jugar!";
       clearInterval(rrInterval);
       dismiss();
     }
@@ -26950,15 +26898,13 @@ function Lh() {
       const W = oo.getLastPosition();
       if (W && W.lat && W.lng) {
         so.centerOnPlayer(W.lat, W.lng);
-        Ke("📍 Centrado en tu ubicación");
       } else if ("geolocation" in navigator) {
-        Ke("Buscando señal GPS...");
+        Ke("Buscando señal GPS…");
         navigator.geolocation.getCurrentPosition(
           (pos) => {
             so.centerOnPlayer(pos.coords.latitude, pos.coords.longitude);
-            Ke("📍 Centrado en tu ubicación");
           },
-          () => Ke("Esperando señal GPS precisa..."),
+          () => Ke("Esperando una señal GPS precisa…"),
           { enableHighAccuracy: true, timeout: 5000 },
         );
       } else {
@@ -27037,9 +26983,9 @@ function bh() {
     fu();
     ga();
     xh();
-    if (_.phase === "SEEKING") Ke("⚡ ¡Comienza la búsqueda! 🔍");
+    if (_.phase === "SEEKING") (haptic("warning"), Ke("¡Empieza la búsqueda!"));
     if (_.phase === "ZONE_WARNING")
-      Ke("⚠️ ¡ZONA REDUCIÉNDOSE! Corre a la línea discontinua");
+      Ke("La zona se cierra: entra en la línea discontinua");
   }),
     ut.on("positions_update", (_) => {
       const u = ut.getId(),
@@ -27087,7 +27033,8 @@ function bh() {
       if (_.zoneEndsAt) ct.phaseEndsAt = _.zoneEndsAt;
       const u = document.getElementById("zone-warning");
       if (u) u.classList.remove("hidden");
-      Ke("⚠️ ¡ZONA REDUCIÉNDOSE! Corre al interior de la línea discontinua");
+      haptic("warning");
+      Ke("La zona se cierra: entra en la línea discontinua");
     }),
     ut.on("zone_updated", (_) => {
       if (_.currentZone) {
@@ -27097,16 +27044,18 @@ function bh() {
         Ni.clearNextZone();
         const u = document.getElementById("zone-warning");
         if (u) u.classList.add("hidden");
-        Ke("⚡ ¡Zona cerrada! La tormenta ha avanzado.");
+        Ke("Zona cerrada: la tormenta ha avanzado");
       }
     }),
     ut.on("outside_zone_warning", (_) => {
       const bar = document.getElementById("outside-zone-bar");
       if (!bar) return;
+      const wasOutside = ct.serverSaidOutside;
       ct.serverSaidOutside = Boolean(_.isOutside);
       if (_.isOutside) {
+        wasOutside || haptic("warning");
         bar.classList.remove("hidden");
-        bar.innerHTML = `⚠️ ¡ESTÁS FUERA DE LA ZONA! Vuelve antes de ser eliminado (<strong>${_.remainingSec}s</strong>)`;
+        bar.innerHTML = `${wt("alertTriangle", 16)}<span>Fuera de la zona · vuelve en <strong>${_.remainingSec} s</strong></span>`;
       } else {
         bar.classList.add("hidden");
       }
@@ -27140,6 +27089,9 @@ function bh() {
     ut.on("chat_message", (_) => {
       wh(_);
     }),
+    ut.on("error", (_) => {
+      Ke((_ && _.message) || "Algo ha fallado");
+    }),
     ut.on("spot_miss", (_) => {
       Ke(_.message || "¡Nadie en este punto!");
     }),
@@ -27149,11 +27101,25 @@ function bh() {
     ut.on("lobby_update", (_) => {
       ((ct.players = Array.isArray(_) ? _ : []), no());
     }),
-    ut.on("game_over", (_) => {
-      (Mh(), Xt.navigate("results", _));
-    }));
+    ut.on("game_over", finishGame));
+}
+// Deja ver la alerta de captura antes de pasar a resultados
+function finishGame(_) {
+  if (Xt.getCurrent() !== "game" || ct.finishing) return;
+  ct.finishing = !0;
+  const alertOn = document
+    .getElementById("catch-alert")
+    ?.classList.contains("active");
+  setTimeout(
+    () => {
+      ct.finishing = !1;
+      Xt.getCurrent() === "game" && (Mh(), Xt.navigate("results", _));
+    },
+    alertOn ? 2600 : 0,
+  );
 }
 function fu() {
+  document.documentElement.dataset.phase = ct.phase || "";
   const _ = document.getElementById("hud-phase");
   (_ && (_.textContent = pu(ct.phase)), no(), ga());
 }
@@ -27163,6 +27129,7 @@ function no() {
   _ && (_.textContent = u);
 }
 function ga() {
+  document.documentElement.dataset.role = ct.role || "";
   const _ = document.getElementById("btn-catch");
   if (_) {
     const isSeeker =
@@ -27258,23 +27225,19 @@ function Ch() {
   const u = ct.players.filter((c) => c.role === "hider" && c.isAlive);
   if (u.length === 0) {
     _.innerHTML =
-      '<div class="empty-state"><span class="text-muted">No hay jugadores para pillar</span></div>';
+      '<div class="empty-state">No queda nadie escondido</div>';
     return;
   }
   ((_.innerHTML = u
     .map(
       (c) => `
-    <button class="catch-player-btn" data-id="${c.id}">
-      <div class="flex items-center gap-sm">
-        <div class="player-avatar" style="background:${c.carColor || "#007aff"}; width:32px; height:32px; font-size:0.75rem;">
-          ${(c.name || "J")[0].toUpperCase()}
-        </div>
-        <div>
-          <div class="player-name" style="font-size:0.938rem;">${ao(c.name)}</div>
-          <div class="player-car" style="font-size:0.75rem;">${ao(c.carModel || "")}</div>
-        </div>
-      </div>
-      <span style="color:var(--color-danger);">${wt("target", 20)}</span>
+    <button class="row catch-player-btn" data-id="${c.id}">
+      <span class="player-avatar" style="--car:${c.carColor || "#0A84FF"};">${ao((c.name || "J")[0].toUpperCase())}</span>
+      <span class="player-info">
+        <span class="player-name">${ao(c.name)}</span>
+        <span class="player-car">${ao(c.carModel || "Sin modelo")}</span>
+      </span>
+      <span class="catch-player-action">${wt("target", 16)} Pillar</span>
     </button>
   `,
     )
@@ -27296,17 +27259,15 @@ function Ch() {
           const targetPlayer = ct.players.find((p) => p.id === g);
           if (pName && targetPlayer)
             pName.textContent = targetPlayer.name || "Jugador";
-          pBox.innerHTML = `
-      <div style="font-size:2rem; margin-bottom:4px;">📸</div>
-      <div style="font-size:0.813rem; color:var(--color-text-muted);">Toca para abrir la cámara</div>
-    `;
+          pBox.innerHTML = `${wt("camera", 32)}<span>Toca para abrir la cámara</span>`;
+          pInput.value = "";
           if (pSave) pSave.classList.add("hidden");
           pBox.onclick = () => pInput.click();
           pInput.onchange = (e) => {
             const file = e.target.files && e.target.files[0];
             if (file) {
               pBox.innerHTML =
-                '<div class="spinner" style="margin:8px auto;"></div><span style="font-size:0.75rem; color:var(--color-text-muted);">Comprimiendo foto...</span>';
+                '<div class="spinner"></div><span>Preparando la foto…</span>';
               const reader = new FileReader();
               reader.onload = (ev) => {
                 const img = new Image();
@@ -27329,12 +27290,12 @@ function Ch() {
                   const ctx = canvas.getContext("2d");
                   ctx.drawImage(img, 0, 0, w, h);
                   currentPhotoData = canvas.toDataURL("image/jpeg", 0.8);
-                  pBox.innerHTML = `<img src="${currentPhotoData}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" />`;
+                  pBox.innerHTML = `<img src="${currentPhotoData}" alt="Foto del coche" />`;
                   if (pSave) pSave.classList.remove("hidden");
                 };
                 img.onerror = () => {
                   currentPhotoData = ev.target.result;
-                  pBox.innerHTML = `<img src="${currentPhotoData}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" />`;
+                  pBox.innerHTML = `<img src="${currentPhotoData}" alt="Foto del coche" />`;
                   if (pSave) pSave.classList.remove("hidden");
                 };
                 img.src = ev.target.result;
@@ -27357,14 +27318,13 @@ function Ch() {
             });
             (w = document.getElementById("btn-close-catch")) == null ||
               w.click();
-            Ke("📸 ¡Foto guardada y jugador cazado!");
+            Ke("Ficha guardada");
           };
           pModal.classList.remove("hidden");
         } else {
           (ut.emit("catch_player", { targetId: g, roomCode: ct.roomCode }),
             (w = document.getElementById("btn-close-catch")) == null ||
               w.click());
-          Ke("🎯 ¡Fugitivo cazado!");
         }
       });
     }));
@@ -27376,17 +27336,24 @@ function kh(_) {
     w = document.getElementById("catch-alert-tip");
   if (!u) return;
   const G = ut.getId(),
-    S = _.playerId === G;
-  (S
-    ? ((c.textContent = "¡TE HAN PILLADO!"),
-      (g.textContent = `${_.seekerName} te ha encontrado`),
+    S = _.playerId === G,
+    hunter = _.seekerName || _.catcherName || "El buscador",
+    icon = document.getElementById("catch-alert-icon");
+  (u.classList.toggle("is-me", S),
+    u.classList.toggle("is-other", !S),
+    icon && (icon.innerHTML = S ? wt("skull", 44) : wt("target", 44)),
+    S
+    ? ((c.textContent = "¡Te han pillado!"),
+      (g.textContent = `${hunter} te ha encontrado`),
       (w.textContent = _.caughtBecomesSeeker
-        ? "¡Ahora te toca buscar! Sal a cazar."
-        : "Has sido eliminado. Puedes seguir viendo la partida."))
-    : ((c.textContent = "¡JUGADOR CAZADO!"),
-      (g.textContent = `${_.playerName} ha sido pillado por ${_.seekerName}`),
+        ? "Ahora te toca buscar. ¡Sal a cazar!"
+        : "Estás eliminado. Puedes seguir viendo la partida."),
+      haptic("error"))
+    : ((c.textContent = "¡Jugador cazado!"),
+      (g.textContent = `${hunter} ha pillado a ${_.playerName}`),
       (w.textContent = ""),
-      (w.style.display = "none")),
+      (w.style.display = "none"),
+      _.catcherId === G && haptic("success")),
     u.classList.add("active"),
     setTimeout(
       () => {
@@ -27407,8 +27374,10 @@ function wh(_) {
       : _.type === "zone"
         ? ((c.className = "chat-msg chat-msg-zone"),
           (c.textContent = _.message))
-        : ((c.className = "chat-msg"),
-          (c.innerHTML = `<span class="msg-author" style="color:${_.carColor || _.playerColor || "var(--color-accent)"}">${ao(_.playerName || "")}:</span> ${ao(_.message)}`));
+        : ((c.className =
+            "chat-msg" +
+            (_.senderId && _.senderId === ut.getId() ? " is-mine" : "")),
+          (c.innerHTML = `<span class="msg-author" style="--author:${_.carColor || _.playerColor || "var(--accent)"}">${ao(_.playerName || "")}</span><span class="msg-text">${ao(_.message)}</span>`));
   u.appendChild(c);
   u.scrollTop = u.scrollHeight;
   ct.isChatOpen || (ct.unreadMessages++, _u());
@@ -27444,7 +27413,10 @@ function Mh() {
       "chat_message",
       "lobby_update",
       "game_over",
+      "error",
     ].forEach((u) => ut.off(u)));
+  (delete document.documentElement.dataset.phase,
+    delete document.documentElement.dataset.role);
 }
 function Eh(_, u) {
   const {
@@ -27483,48 +27455,38 @@ function Eh(_, u) {
     return `${pt}:${vt.toString().padStart(2, "0")}`;
   };
   const it = () => {
-    if (isSeekersWon) return "¡El Seeker gana!";
-    if (w === "time_up" || winSide === "hiders") return "¡Los Hiders ganan!";
-    if (w === "zone_collapsed") return "¡Zona colapsada!";
-    return "¡Fin de la Partida!";
+    if (isSeekersWon) return "Ganan los buscadores";
+    if (w === "time_up" || winSide === "hiders") return "Ganan los escondidos";
+    if (w === "zone_collapsed") return "La zona ha colapsado";
+    return "Fin de la partida";
   };
   const W = () => {
-    if (isSeekersWon) return "Todos los fugitivos han sido cazados";
+    if (isSeekersWon) return "Han cazado a todos los escondidos.";
     if (w === "time_up" || winSide === "hiders")
-      return "Los fugitivos han sobrevivido a la cacería";
+      return "Los escondidos han sobrevivido a la cacería.";
     return "";
   };
-  const bt = (ot) =>
-    ot === 0 ? "#1" : ot === 1 ? "#2" : ot === 2 ? "#3" : `#${ot + 1}`;
   ((_.innerHTML = `
     <nav class="navbar">
-      <div style="width:48px;"></div>
-      <span class="navbar-logo">
-        ${wt("trophy", 20)}
-        <span>Resultados</span>
-      </span>
-      <div style="width:48px;"></div>
+      <span class="nav-spacer"></span>
+      <span class="navbar-title">Resultados</span>
+      <span class="nav-spacer"></span>
     </nav>
 
-    <div class="screen-content" style="padding-top: calc(var(--navbar-height) + var(--space-md));">
+    <div class="screen-content with-navbar results">
 
-      <!-- Resultado principal -->
-      <div class="text-center mb-lg" style="animation: scale-in 0.5s ease-out;">
-        <div style="font-size:4rem; margin-bottom:var(--space-sm);">
-          ${isSeekersWon ? "🔍" : "🏆"}
+      <header class="results-hero ${isSeekersWon ? "is-seekers" : "is-hiders"}">
+        <div class="results-emblem" aria-hidden="true">
+          ${isSeekersWon ? wt("target", 44) : wt("trophy", 44)}
         </div>
-        <h1 style="font-size:2rem; margin-bottom:var(--space-xs);">${it()}</h1>
-        <p>${W()}</p>
-        <div class="badge badge-accent mt-sm" style="font-size:0.875rem; padding:8px 16px;">
-          ${wt("clock", 16)} Duración: ${S(g)}
-        </div>
-      </div>
+        <h1 class="results-title">${it()}</h1>
+        ${W() ? `<p class="results-subtitle">${W()}</p>` : ""}
+        <span class="duration-chip">${wt("clock", 14)} ${S(g)}</span>
+      </header>
 
-      <!-- Ranking -->
-      <div class="section-header">
-        <span class="section-title">${wt("trophy", 16)} Ranking & Fichas de Partida</span>
-      </div>
-      <div class="card mb-lg" style="padding:var(--space-sm);">
+      <section class="group" aria-labelledby="results-ranking-title">
+        <h2 class="group-title" id="results-ranking-title">Clasificación</h2>
+        <div class="list ranking">
         ${
           allPlayers.length > 0
             ? allPlayers
@@ -27533,72 +27495,55 @@ function Eh(_, u) {
                     ? ot.role === "seeker"
                     : ot.role === "hider" && ot.isAlive !== false;
                   return `
-          <div class="player-item result-rank ${isWinner ? "winner-vip-card" : "loser-clown-card"}" style="
-            ${pt === 0 ? "box-shadow: 0 0 16px rgba(255,149,0,0.25);" : ""}
-          ">
-            <div style="width:32px; text-align:center; font-size:1.15rem; font-weight:800; flex-shrink:0; color:${isWinner ? "#FFD700" : "#FF453A"};">
-              ${bt(pt)}
-            </div>
+          <div class="row player-item result-rank ${isWinner ? "winner-vip-card" : "loser-clown-card"}" style="--i:${pt};">
+            <span class="rank-number">${pt + 1}</span>
             ${
               ot.photo
                 ? `
-              <div class="player-mugshot-wrapper ${isWinner ? "winner-frame" : "loser-frame"}" id="mugshot-slot-${pt}" onclick="window.openMugshotModal && window.openMugshotModal(${pt})">
-                <img src="${ot.photo}" class="player-mugshot-img" id="mugshot-img-${pt}" alt="${Wa(ot.name)}" />
-                <span class="mugshot-badge ${isWinner ? "badge-vip" : "badge-clown"}">${isWinner ? "VIP CHAMP" : "PAYASO"}</span>
-              </div>
+              <button type="button" class="player-mugshot-wrapper ${isWinner ? "winner-frame" : "loser-frame"}" id="mugshot-slot-${pt}" onclick="window.openMugshotModal && window.openMugshotModal(${pt})" aria-label="Ver foto de ${Wa(ot.name)}">
+                <img src="${ot.photo}" class="player-mugshot-img" id="mugshot-img-${pt}" alt="" />
+              </button>
             `
                 : `
-              <div class="player-avatar" style="background:${ot.carColor || "#007aff"}; border:2px solid ${isWinner ? "#FFD700" : "#FF3B30"};">
-                ${(ot.name || "J")[0].toUpperCase()}
-              </div>
+              <span class="player-avatar" style="--car:${ot.carColor || "#0A84FF"};">${Wa((ot.name || "J")[0].toUpperCase())}</span>
             `
             }
             <div class="player-info">
-              <div class="player-name" style="display:flex; align-items:center; gap:6px;">
-                <span>${Wa(ot.name)}</span>
-                <span style="font-size:0.688rem; font-weight:700; color:${isWinner ? "#FFD700" : "#FF453A"};">
-                  ${isWinner ? "★ GANADOR" : "🤡 PAYASO"}
-                </span>
-              </div>
+              <div class="player-name">${Wa(ot.name)}</div>
               <div class="player-car">
-                ${ot.initialRole === "seeker" || (ot.role === "seeker" && !ot.survivalTime) ? `Seeker${ot.catchesCount ? ` · ${ot.catchesCount} cazado${ot.catchesCount > 1 ? "s" : ""}` : ""}` : `Sobrevivió ${S(ot.survivalTime || (isWinner ? g : 0))}${ot.caughtBy ? ` · Pillado por ${Wa(ot.caughtBy)}` : ""}`}
+                ${ot.initialRole === "seeker" || (ot.role === "seeker" && !ot.survivalTime) ? `Buscador${ot.catchesCount ? ` · ${ot.catchesCount} ${ot.catchesCount > 1 ? "capturas" : "captura"}` : ""}` : `Aguantó ${S(ot.survivalTime || (isWinner ? g : 0))}${ot.caughtBy ? ` · cazado por ${Wa(ot.caughtBy)}` : ""}`}
               </div>
               ${
                 ot.caughtPhoto
                   ? `
-                <div style="margin-top:4px;">
-                  <button type="button" class="btn btn-ghost btn-sm" style="font-size:0.75rem; padding:3px 8px; border:1px solid rgba(255,255,255,0.18); border-radius:6px; color:var(--color-text);" onclick="event.stopPropagation(); window.openCaughtPhotoModal && window.openCaughtPhotoModal(${pt})">
-                    📸 Ver Coche Pillado
-                  </button>
-                </div>
+                <button type="button" class="link-button" onclick="event.stopPropagation(); window.openCaughtPhotoModal && window.openCaughtPhotoModal(${pt})">
+                  ${wt("camera", 14)} Ver ficha del coche
+                </button>
               `
                   : ""
               }
             </div>
-            <span class="player-role" style="${isWinner ? "background:linear-gradient(90deg,#D4AF37,#FFD700);color:#0E1015;font-weight:750;" : "background:linear-gradient(90deg,#8A0014,#FF1A40);color:#FFF;font-weight:750;"}">
-              ${isWinner ? "VIP" : "PAYASO"}
+            <span class="player-role ${isWinner ? "is-vip" : "is-clown"}">
+              ${isWinner ? "★ VIP" : "🤡 Payaso"}
             </span>
           </div>
         `;
                 })
                 .join("")
-            : HTML`
-          <div class="empty-state">
-            <span class="text-muted">Sin datos de ranking</span>
-          </div>
+            : `
+          <div class="empty-state">Sin datos de la partida</div>
         `
         }
-      </div>
+        </div>
+      </section>
 
-      <!-- Acciones -->
-      <div class="flex-col gap-sm mb-lg">
+      <div class="action-stack">
         <button id="btn-play-again" class="btn btn-primary btn-lg">
-          ${wt("play")}
-          Jugar Otra Vez
+          ${wt("refresh", 20)}
+          Jugar otra vez
         </button>
-        <button id="btn-go-home" class="btn btn-ghost btn-lg">
-          ${wt("home")}
-          Volver al Inicio
+        <button id="btn-go-home" class="btn btn-tinted btn-lg">
+          Volver al inicio
         </button>
       </div>
     </div>
@@ -27632,22 +27577,20 @@ function Bh(_, u, players = [], isSeekersWon = false) {
     modal.id = "caught-photo-modal";
     modal.className = "mugshot-modal-overlay";
     modal.innerHTML = `
-      <div class="mugshot-modal-card loser-border">
-        <div style="padding:14px 18px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--color-border);">
+      <div class="mugshot-modal-card loser-border" role="dialog" aria-labelledby="caught-photo-title">
+        <div class="modal-header">
           <div>
-            <div style="font-weight:700; color:var(--color-text); font-size:1.1rem;">🚗 Coche de ${Wa(pl.name)}</div>
-            <div style="font-size:0.813rem; color:var(--color-danger); font-weight:700;">
-              ${pl.caughtBy ? `📸 Fichado por ${Wa(pl.caughtBy)}` : "📸 Foto de Captura"}
-            </div>
+            <div class="modal-title" id="caught-photo-title">Coche de ${Wa(pl.name)}</div>
+            <div class="modal-subtitle is-danger">${pl.caughtBy ? `Fichado por ${Wa(pl.caughtBy)}` : "Foto de la captura"}</div>
           </div>
-          <button id="btn-close-caught-photo" class="btn-icon btn-ghost" style="border:none;">${wt("x", 20)}</button>
+          <button id="btn-close-caught-photo" class="sheet-close" aria-label="Cerrar">${wt("x", 16)}</button>
         </div>
         <img src="${pl.caughtPhoto}" class="mugshot-modal-img" alt="Coche cazado" />
-        <div style="padding:14px 18px; display:flex; gap:10px; background:var(--color-bg-elevated);">
-          <a href="${pl.caughtPhoto}" download="coche_${pl.name || "cazado"}.jpg" class="btn btn-primary" style="flex:1; text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px;">
-            ${wt("download", 16)} Descargar Foto Coche
+        <div class="modal-actions">
+          <a href="${pl.caughtPhoto}" download="coche_${pl.name || "cazado"}.jpg" class="btn btn-primary">
+            ${wt("download", 18)} Guardar foto
           </a>
-          <button id="btn-close-caught-photo-bottom" class="btn btn-ghost">Cerrar</button>
+          <button id="btn-close-caught-photo-bottom" class="btn btn-tinted">Cerrar</button>
         </div>
       </div>
     `;
@@ -27671,32 +27614,31 @@ function Bh(_, u, players = [], isSeekersWon = false) {
     modal.id = "mugshot-viewer-modal";
     modal.className = "mugshot-modal-overlay";
     modal.innerHTML = `
-      <div class="mugshot-modal-card ${isWinner ? "winner-border" : "loser-border"}">
-        <div style="padding:14px 18px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--color-border);">
+      <div class="mugshot-modal-card ${isWinner ? "winner-border" : "loser-border"}" role="dialog" aria-labelledby="mugshot-title">
+        <div class="modal-header">
           <div>
-            <div style="font-weight:700; color:var(--color-text); font-size:1.1rem;">${Wa(pl.name)}</div>
-            <div style="font-size:0.813rem; color:${isWinner ? "#FFD700" : "#FF453A"}; font-weight:700;">
-              ${isWinner ? "★ Ganador Millonario 3D VIP" : "🤡 Payaso de la Partida 3D"}
+            <div class="modal-title" id="mugshot-title">${Wa(pl.name)}</div>
+            <div class="modal-subtitle ${isWinner ? "is-gold" : "is-danger"}">
+              ${isWinner ? "★ Ganador millonario" : "🤡 El payaso de la partida"}
             </div>
           </div>
-          <button id="btn-close-mugshot" class="btn-icon btn-ghost" style="border:none;">${wt("x", 20)}</button>
+          <button id="btn-close-mugshot" class="sheet-close" aria-label="Cerrar">${wt("x", 16)}</button>
         </div>
         <img src="${pl.filteredPhoto || pl.photo}" class="mugshot-modal-img" alt="${Wa(pl.name)}" />
         ${
           pl.caughtPhoto
             ? `
-          <div style="padding:10px 18px; background:rgba(255,255,255,0.03); border-top:1px solid var(--color-border); display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:0.813rem; color:var(--color-text-muted);">🚗 Coche cazado fichado</span>
-            <button class="btn btn-ghost btn-sm" onclick="window.openCaughtPhotoModal(${pt})">Ver Foto Coche</button>
-          </div>
+          <button type="button" class="modal-row" onclick="window.openCaughtPhotoModal(${pt})">
+            ${wt("car", 18)}<span>Ver ficha del coche cazado</span>${wt("chevronLeft", 16)}
+          </button>
         `
             : ""
         }
-        <div style="padding:14px 18px; display:flex; gap:10px; background:var(--color-bg-elevated);">
-          <a href="${pl.filteredPhoto || pl.photo}" download="${isWinner ? "ganador_millonario" : "payaso"}_${pl.name || "foto"}.jpg" class="btn btn-primary" style="flex:1; text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px;">
-            ${wt("download", 16)} Descargar Selfie
+        <div class="modal-actions">
+          <a href="${pl.filteredPhoto || pl.photo}" download="${isWinner ? "ganador_millonario" : "payaso"}_${pl.name || "foto"}.jpg" class="btn btn-primary">
+            ${wt("download", 18)} Guardar selfie
           </a>
-          <button id="btn-close-mugshot-bottom" class="btn btn-ghost">Cerrar</button>
+          <button id="btn-close-mugshot-bottom" class="btn btn-tinted">Cerrar</button>
         </div>
       </div>
     `;
@@ -27752,9 +27694,7 @@ function Ya() {
     Xt.register("game", vh),
     Xt.register("results", Eh),
     Xt.navigate("home"),
-    ut.on("game_over", (_) => {
-      Xt.getCurrent() === "game" && Xt.navigate("results", _);
-    }),
+    ut.on("game_over", finishGame),
     ut.onConnect(() => {
       console.log("[Car Hide] Conectado al servidor");
     }),

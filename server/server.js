@@ -7,6 +7,7 @@ const express    = require('express');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const path       = require('path');
+const fs         = require('fs');
 
 const app        = express();
 const httpServer = createServer(app);
@@ -17,21 +18,36 @@ const io         = new Server(httpServer, {
 });
 
 const PORT = process.env.PORT || 3000;
+const INDEX_FILE = path.join(__dirname, '..', 'index.html');
 
+// Detrás del proxy de Render, para conocer el protocolo y host reales
+app.set('trust proxy', true);
+
+// index.html con la imagen social en URL absoluta (WhatsApp y otros la exigen)
+function sendIndex(req, res) {
+  fs.readFile(INDEX_FILE, 'utf8', (err, html) => {
+    if (err) return res.status(500).send('index.html no encontrado');
+    const origin = `${req.protocol}://${req.get('host')}`;
+    res.type('html').send(
+      html.replace(/content="(?:\.)?\/og-image\.png"/g, `content="${origin}/og-image.png"`)
+    );
+  });
+}
+app.get(['/', '/index.html'], sendIndex);
 app.use(express.static(path.join(__dirname, '..')));
 
 const APP_RELEASE = {
   version: require('../package.json').version,
-  deployedAt: "2026-09-19 17:22 (UTC+2)",
-  latestCommit: "0ac3164",
+  deployedAt: new Date().toISOString(),
+  latestCommit: (process.env.RENDER_GIT_COMMIT || 'local').slice(0, 7),
   features: [
-    "HUD táctil y Z-Index reforzado en móviles (Botón GPS y Chat flotante)",
-    "Centrado GPS con rescate automático (getCurrentPosition)",
-    "Visibilidad por rol (Buscadores solo ven buscadores, Escondidos solo escondidos)",
-    "Temporizadores de fase sincronizados y reducción automática de zona",
-    "Animación de 3s al revelar el rol al inicio",
-    "Radar Sonar táctico para buscadores (cooldown 12s)",
-    "Cámara y selfie con filtros AR (Ganador VIP vs Payaso 3D)"
+    "Rediseño «Nocturna»: interfaz estilo iOS con materiales translúcidos y movimiento por muelles",
+    "Hojas de chat y captura que se cierran arrastrando",
+    "Chat dentro de la partida reparado",
+    "Mapa de la partida encuadrado en la zona de juego",
+    "Captura validada por distancia GPS en el servidor",
+    "Vibración en los momentos clave (captura, fase de búsqueda, zona)",
+    "App instalable (PWA) e imagen para compartir el enlace"
   ]
 };
 
@@ -43,9 +59,7 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', rooms: Object.keys(rooms).length, version: APP_RELEASE.version });
 });
 
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'index.html'));
-});
+app.get('*', sendIndex);
 
 const rooms = {};
 

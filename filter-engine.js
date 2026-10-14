@@ -35,7 +35,7 @@
     if (typeof window.FaceMesh !== 'undefined') {
       try {
         faceMeshInstance = new window.FaceMesh({
-          locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+          locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`
         });
         faceMeshInstance.setOptions({
           maxNumFaces: 1,
